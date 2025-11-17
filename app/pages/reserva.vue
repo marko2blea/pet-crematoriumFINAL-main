@@ -4,7 +4,7 @@
     <div class="max-w-4xl mx-auto">
       <div class="text-center mb-10">
         <h1 class="text-4xl font-extrabold text-purple-dark mb-3">Finalizar Pedido</h1>
-        <p class="text-lg text-gray-600">Complete los datos de su mascota y el lugar de retiro/envío.</p>
+        <p class="text-lg text-gray-600">Complete los datos requeridos para su {{ isServiceOrder ? 'Reserva de Servicio' : 'Entrega de Productos' }}.</p>
       </div>
 
       <div v-if="isLoading" class="mb-4 p-4 rounded-lg text-center text-lg bg-blue-100 border border-blue-400 text-blue-700">
@@ -18,7 +18,7 @@
         
         <div class="lg:col-span-2 space-y-8">
           
-          <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-dark">
+          <div v-if="isServiceOrder" class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-dark">
             <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
               1. Datos de la Mascota
             </h2>
@@ -61,63 +61,63 @@
               </div>
             </div>
           </div>
-
+          
           <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-dark">
             <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
-              2. Dirección de Retiro / Envío
+              {{ isServiceOrder ? '2. Dirección de Retiro del Servicio' : '1. Opciones de Entrega' }}
             </h2>
+            
             <div class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="region" class="block text-sm font-semibold text-dark-primary-blue mb-2">Región</label>
-                  <input 
-                    v-model="formDireccion.region"
-                    id="region" 
-                    type="text" 
-                    required
-                    class="form-input"
-                    placeholder="Ej: Biobío"
-                  />
-                </div>
-                <div>
-                  <label for="comuna" class="block text-sm font-semibold text-dark-primary-blue mb-2">Comuna</label>
-                  <input 
-                    v-model="formDireccion.comuna"
-                    id="comuna" 
-                    type="text" 
-                    required
-                    class="form-input"
-                    placeholder="Ej: Concepción"
-                  />
-                </div>
-              </div>
-              <div>
-                <label for="direccion" class="block text-sm font-semibold text-dark-primary-blue mb-2">Dirección</label>
-                <input 
-                  v-model="formDireccion.direccion"
-                  id="direccion" 
-                  type="text" 
+              <div class="mb-4">
+                <label class="block text-sm font-semibold text-dark-primary-blue mb-2">Método de Entrega</label>
+                <select 
+                  v-model="formEntrega.deliveryType"
+                  class="form-input bg-white"
                   required
-                  class="form-input"
-                  placeholder="Calle, Número, Depto (Opcional)"
-                />
+                >
+                  <option value="delivery">{{ isServiceOrder ? 'Retiro de Mascota a Domicilio' : 'Envío a Domicilio' }}</option>
+                  <option value="pickup">Retiro/Entrega en Oficina (Tomé)</option>
+                </select>
+              </div>
+
+              <div v-if="formEntrega.deliveryType === 'delivery'">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label for="region" class="block text-sm font-semibold text-dark-primary-blue mb-2">Región</label>
+                      <input v-model="formDireccion.region" id="region" type="text" required class="form-input" placeholder="Ej: Biobío"/>
+                    </div>
+                    <div>
+                      <label for="comuna" class="block text-sm font-semibold text-dark-primary-blue mb-2">Comuna</label>
+                      <input v-model="formDireccion.comuna" id="comuna" type="text" required class="form-input" placeholder="Ej: Concepción"/>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="direccion" class="block text-sm font-semibold text-dark-primary-blue mb-2">Dirección Completa</label>
+                    <input v-model="formDireccion.direccion" id="direccion" type="text" required class="form-input" placeholder="Calle, Número, Depto (Opcional)"/>
+                  </div>
+              </div>
+              
+              <div v-else-if="formEntrega.deliveryType === 'pickup'" class="bg-blue-50 p-4 rounded-lg text-blue-800">
+                  <p class="font-semibold">Retiro/Entrega en Oficina Seleccionada:</p>
+                  <p class="text-sm">Puede retirar/dejar su pedido en nuestra oficina principal en Tomé. Le notificaremos cuando sea el momento.</p>
               </div>
             </div>
           </div>
+
         </div>
 
         <div class="lg:col-span-1">
           <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-bd-gold-accent sticky top-24">
             <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">Resumen</h2>
             
-            <ul class="space-y-2 mb-4">
+            <ul class="space-y-2 mb-4 max-h-48 overflow-y-auto">
               <li v-for="item in cart" :key="item.id" class="flex justify-between items-center text-sm">
                 <span class="text-gray-700">{{ item.nombre }} <span class="text-gray-500">x{{ item.quantity }}</span></span>
                 <span class="font-semibold text-dark-primary-blue">${{ (item.precio * item.quantity).toLocaleString('es-CL') }}</span>
               </li>
             </ul>
             
-            <div class="space-y-3 text-lg">
+            <div class="space-y-3 text-lg border-t pt-4">
                 <div class="flex justify-between">
                     <span class="text-gray-600">Subtotal:</span>
                     <span class="font-semibold text-dark-primary-blue">${{ cartTotal.toLocaleString('es-CL') }}</span>
@@ -154,6 +154,7 @@
         </div>
         
       </form>
+
     </div>
   </div>
 </template>
@@ -163,20 +164,27 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import type { CartItem } from '../../app/types';
 
 library.add(faCheckCircle);
 
 definePageMeta({
-  middleware: 'auth' // Requiere que el usuario esté logueado
+  middleware: 'auth'
 });
 
 const router = useRouter();
-const user = useUser();
-const { cart, cartTotal, loadCart, clearCart } = useCart();
+const user = useUser(); 
+const { cart, cartTotal, loadCart, clearCart } = useCart(); 
 
+// --- Estados Calculados ---
+// Si hay al menos un Servicio, es una orden de Servicio
+const isServiceOrder = computed(() => (cart.value as CartItem[]).some(item => item.tipo === 'Servicio'));
+
+// --- Estado de UI ---
 const isLoading = ref(false);
 const errorMessage = ref('');
 
+// --- Formularios Reactivos ---
 const formMascota = ref({
   petName: '',
   petWeight: null as number | null,
@@ -189,6 +197,12 @@ const formDireccion = ref({
   direccion: '',
 });
 
+const formEntrega = ref({
+  deliveryType: 'delivery' as 'delivery' | 'pickup' // 'delivery' por defecto
+});
+
+
+// 2. Rellenar el formulario de dirección con los datos del usuario
 onMounted(() => {
   loadCart(); 
   
@@ -198,22 +212,23 @@ onMounted(() => {
       comuna: user.value.comuna || '',
       direccion: user.value.direccion || '',
     };
-  } else {
-    router.push('/login?redirectTo=/reserva');
   }
 });
 
+// --- Totales ---
 const iva = computed(() => Math.round(cartTotal.value * 0.19));
 const totalGeneral = computed(() => cartTotal.value + iva.value);
 
+
+// --- Función de Envío (Checkout) ---
 const handleSubmit = async () => {
   isLoading.value = true;
   errorMessage.value = '';
 
+  // 1. Validaciones
   if (!user.value || !user.value.id_usuario) {
     errorMessage.value = "Error de sesión. Por favor, inicie sesión de nuevo.";
     isLoading.value = false;
-    router.push('/login?redirectTo=/reserva');
     return;
   }
   if (cart.value.length === 0) {
@@ -222,34 +237,41 @@ const handleSubmit = async () => {
     router.push('/');
     return;
   }
-  if (!formMascota.value.petName || !formMascota.value.petWeight) {
+  
+  // Validación Condicional: Mascota (Si hay servicio, se requiere mascota)
+  if (isServiceOrder.value && (!formMascota.value.petName || !formMascota.value.petWeight)) {
     errorMessage.value = "Por favor, complete el nombre y peso de la mascota.";
     isLoading.value = false;
     return;
   }
-  if (!formDireccion.value.region || !formDireccion.value.comuna || !formDireccion.value.direccion) {
-    errorMessage.value = "Por favor, complete los datos de dirección.";
+
+  // Validación Condicional: Dirección (Solo si es Delivery)
+  if (formEntrega.value.deliveryType === 'delivery' && (!formDireccion.value.region || !formDireccion.value.comuna || !formDireccion.value.direccion)) {
+    errorMessage.value = "Por favor, complete los datos de dirección de entrega/retiro.";
     isLoading.value = false;
     return;
   }
 
+
+  // 2. Construir el body que la API (checkout.post.ts) espera
   const bodyPayload = {
     formData: {
-      petName: formMascota.value.petName,
+      petName: formMascota.value.petName || 'N/A', 
       petWeight: formMascota.value.petWeight || 0,
       petAge: formMascota.value.petAge || 0,
+      deliveryType: formEntrega.value.deliveryType, 
       region: formDireccion.value.region,
       comuna: formDireccion.value.comuna,
       direccion: formDireccion.value.direccion,
       metodoPago: 'Transferencia Bancaria'
     },
     cartItems: cart.value,
-    cartTotal: cartTotal.value,
+    cartTotal: cartTotal.value, 
     userId: user.value.id_usuario
   };
 
   try {
-    const response = await $fetch<{ trackingCode: string | null, pedidoId: number }>('/api/checkout', {
+    const response = await $fetch<{ trackingCode: string | null, reservaId: number }>('/api/checkout', {
       method: 'POST',
       body: bodyPayload
     });
@@ -257,13 +279,13 @@ const handleSubmit = async () => {
     isLoading.value = false;
     clearCart();
 
-    // (CORRECCIÓN) Se usa response.trackingCode
     if (response.trackingCode) {
       alert('¡Reserva creada con éxito! Serás redirigido a la página de seguimiento.');
       router.push(`/tracking?codigo=${response.trackingCode}`);
     } else {
-      alert('¡Pedido de productos creado con éxito!');
-      router.push('/');
+      // Si el trackingCode es null (producto para pickup)
+      alert('¡Pedido creado con éxito! Puede pasar a retirar en oficina cuando le notifiquemos.');
+      router.push('/'); 
     }
 
   } catch (error: any) {
@@ -275,6 +297,11 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped lang="postcss">
+.form-input {
+  @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-deep focus:border-purple-deep;
+}
+
+/* Estilos de la paleta de colores */
 .text-purple-dark { color: #4A235A; }
 .bg-purple-dark { background-color: #4A235A; } 
 .bg-purple-light { background-color: #6C3483; }
@@ -298,8 +325,6 @@ const handleSubmit = async () => {
 .border-purple-200 { border-color: #ce93d8; }
 .focus\:border-purple-deep:focus { border-color: #5C2A72; }
 .focus\:ring-purple-deep:focus { --tw-ring-color: #5C2A72; }
-
-.form-input {
-  @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-deep focus:border-purple-deep;
-}
+.bg-blue-50 { background-color: #eff6ff; }
+.text-blue-800 { color: #1e40af; }
 </style>

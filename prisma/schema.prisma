@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // "postgresql://marko2blea:1234@localhost:5432/sanantonio_db?schema=public"
+  url      = env("DATABASE_URL")
 }
 
 // ================================================================
@@ -37,7 +37,7 @@ model Usuario {
   reset_token           String?   @unique @db.VarChar(255)
   reset_token_expires DateTime?
   
-  @@map("usuario") // (CORREGIDO)
+  @@map("usuario")
 }
 
 model Rol {
@@ -46,7 +46,7 @@ model Rol {
   descripcion_rol String?   @db.VarChar(255)
   usuario         Usuario[]
   
-  @@map("rol") // (CORREGIDO)
+  @@map("rol")
 }
 
 model Producto {
@@ -66,7 +66,9 @@ model Producto {
   valoraciones    Valoracion[]
   detalles_pedido DetallePedido[]
   
-  @@map("producto") // (CORREGIDO)
+  detalle_reservas Detalle_Reserva[] @relation("ProductToDetalleReserva") 
+  
+  @@map("producto")
 }
 
 // ================================================================
@@ -105,13 +107,16 @@ model DetallePedido {
 }
 
 model Pago {
-  id_pago       Int      @id @default(autoincrement())
-  nombre_metodo String?  @db.VarChar(100)
-  fecha_pago    DateTime @default(now())
-  monto         Decimal  @db.Decimal(10, 2)
-  estado        String   @default("Pendiente")
-
+  id_pago       Int         @id @default(autoincrement())
+  nombre_metodo String?     @db.VarChar(100)
+  fecha_pago    DateTime    @default(now())
+  monto         Decimal     @db.Decimal(10, 2)
+  estado        String      @default("Pendiente")
+  
   pedido Pedido?
+  
+  id_metodo Int? 
+  metodo_pago Metodo_Pago? @relation(fields: [id_metodo], references: [id_metodo], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("pago")
 }
@@ -119,16 +124,21 @@ model Pago {
 model Reserva {
   id_reserva         Int       @id @default(autoincrement())
   id_pedido          Int       @unique
-  cod_trazabilidad   String    @unique @db.Char(9)
+  cod_trazabilidad   String?    @unique @db.Char(9)
   fecha_reservada    DateTime?
   hora_reservada     DateTime?
   estado_reserva     String    @default("Pendiente")
-  
+  precio_total Decimal @db.Decimal(10, 2)
   region             String?   @db.VarChar(100)
   comuna             String?   @db.VarChar(100)
   direccion          String?   @db.VarChar(255)
 
   pedido Pedido @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
+  
+  // (CORRECCION) AÑADIDO FK para la relación con Detalle_Reserva
+  id_detalle_reserva Int? 
+  detalle_reserva Detalle_Reserva? @relation("ReservaToDetalle", fields: [id_detalle_reserva], references: [id_detalle_reserva])
+
 
   @@map("reserva")
 }
@@ -147,8 +157,41 @@ model Envio {
 }
 
 // ================================================================
-// MODELOS SECUNDARIOS
+// MODELOS SECUNDARIOS Y FALTANTES
 // ================================================================
+
+model Metodo_Pago {
+  id_metodo                   Int       @id @default(autoincrement())
+  nombre_metodo               String?   @db.VarChar(100)
+  n_recibo_efectivo           Int?
+  url_comprobante_transferencia String? @db.VarChar(255)
+  rut_emisor                  String?   @db.VarChar(20)
+  banco_emisor                String?   @db.VarChar(100)
+  tipo_cuenta                 String?   @db.VarChar(50)
+  num_cuenta                  String?   @db.VarChar(50)
+  num_transaccion_externa     String?   @db.VarChar(100)
+  pago                        Pago[]
+  
+  @@map("metodo_pago")
+}
+
+model Detalle_Reserva {
+  id_detalle_reserva Int       @id @default(autoincrement())
+  nombre_servicio    String?   @db.VarChar(255)
+  precio_servicio    Decimal?  @db.Decimal(10, 2)
+  tipo_servicio      String?   @db.VarChar(100)
+  desc_servicio      String?   @db.VarChar(500)
+  cantidad           Int?
+  precio_total       Decimal?  @db.Decimal(10, 2)
+  cod_producto       Int?
+  
+  producto           Producto? @relation("ProductToDetalleReserva", fields: [cod_producto], references: [cod_producto], onDelete: NoAction, onUpdate: NoAction) 
+  
+  // (CORRECCION) AÑADIDO: Back-reference al modelo Reserva
+  reserva Reserva[] @relation("ReservaToDetalle")
+  
+  @@map("detalle_reserva") 
+}
 
 model Mascota {
   id_mascota            Int       @id @default(autoincrement())
@@ -163,7 +206,7 @@ model Mascota {
   usuario Usuario? @relation(fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
   especie Especie? @relation(fields: [id_especie], references: [id_especie], onDelete: NoAction, onUpdate: NoAction)
   
-  @@map("mascota") // (CORREGIDO)
+  @@map("mascota")
 }
 
 model Especie {
@@ -173,7 +216,7 @@ model Especie {
   raza           String?   @db.VarChar(100)
   mascota        Mascota[]
   
-  @@map("especie") // (CORREGIDO)
+  @@map("especie")
 }
 
 model Proveedor {
@@ -186,7 +229,7 @@ model Proveedor {
   disponible   Boolean?
   producto     Producto[]
   
-  @@map("proveedor") // (CORREGIDO)
+  @@map("proveedor")
 }
 
 model Valoracion {
@@ -209,7 +252,7 @@ model PageContent {
   title    String  @db.Text
   subtitle String? @db.Text
   
-  @@map("page_content") // (CORREGIDO)
+  @@map("page_content")
 }
 
 model Memorial {
@@ -220,7 +263,7 @@ model Memorial {
   dedicatoria String?   @db.VarChar(255)
   creado_en   DateTime  @default(now())
   
-  @@map("memorial") // (CORREGRECTO)
+  @@map("memorial")
 }
 
 model Instalacion {
@@ -232,7 +275,7 @@ model Instalacion {
   creado_en      DateTime  @default(now())
   imagen_url     String?   @db.VarChar(500)
   
-  @@map("instalacion") // (CORREGIDO)
+  @@map("instalacion")
 }
 
 model AboutBlock {
@@ -244,5 +287,5 @@ model AboutBlock {
   creado_en  DateTime @default(now())
   imagen_url String?  @db.VarChar(500)
   
-  @@map("about_block") // (CORREGIDO)
+  @@map("about_block")
 }

@@ -1,4 +1,3 @@
-// server/api/tracking.get.ts
 import { db } from '../utils/prisma';
 
 /**
@@ -12,45 +11,97 @@ export default defineEventHandler(async (event) => {
     const codigo = query.codigo as string | undefined;
 
     if (!codigo) {
-      throw createError({ statusCode: 400, statusMessage: 'Debe proporcionar un código.' });
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Debe proporcionar un código de trazabilidad.'
+      });
     }
 
-    // 1. Buscar la Reserva por su código
-    const reserva = await db.reserva.findUnique({
+    // ===============================
+    // 1. Buscar la reserva por código
+    // ===============================
+    const reserva = await db.reserva.findFirst({
       where: { cod_trazabilidad: codigo },
       include: {
-        pedido: { 
+        // RELACIÓN CORRECTA: Reserva → Pedido → Pago / Usuario
+        pedido: {
           include: {
-            usuario: { 
-              include: {
-                // (CORRECCIÓN 1) Cambiado a 'mascotas' (plural) y tomando solo 1
-                mascotas: { 
-                  select: { nombre_mascota: true },
-                  take: 1
-                }
+            pago: { select: { estado: true } },
+            usuario: {
+              select: {
+                nombre: true,
+                apellido_paterno: true
               }
             }
           }
+        },
+        // RELACIÓN CORRECTA: Reserva → Detalle_Reserva
+        detalle_reserva: {
+          select: { nombre_servicio: true }
         }
-      },
+      }
     });
 
-    if (!reserva || !reserva.pedido || !reserva.pedido.usuario) {
-      throw createError({ statusCode: 404, statusMessage: 'Código no encontrado o pedido corrupto.' });
+    if (!reserva) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Código no encontrado. Verifique el código e intente de nuevo.'
+      });
     }
 
-    // 2. Devolver la respuesta
+    // ===============================
+    // 2. Lógica de estado
+    // ===============================
+    let computedStatus: string;
+    let fechaMostrar: string;
+
+    const pago = reserva.pedido?.pago;
+    const isCanceled = pago?.estado === 'Cancelado';
+
+    if (isCanceled) {
+      computedStatus = 'Cancelado';
+      fechaMostrar = 'Reserva Anulada';
+    } else if (reserva.fecha_reservada && reserva.hora_reservada) {
+      // Pago OK → Fecha & hora asignadas
+      computedStatus = reserva.estado_reserva === 'Finalizado'
+        ? 'Finalizado'
+        : 'Confirmado';
+
+      const fecha = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
+      const hora = new Date(reserva.hora_reservada).toLocaleTimeString('es-CL', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'UTC'
+      });
+
+      fechaMostrar = `Fecha de ${
+        computedStatus === 'Finalizado' ? 'Entrega' : 'Retiro'
+      }: ${fecha} a las ${hora} (CL)`;
+    } else if (pago?.estado === 'Pendiente') {
+      computedStatus = 'Pendiente de Pago';
+      fechaMostrar = 'Esperando confirmación de pago. Su cupo está reservado.';
+    } else {
+      computedStatus = 'Pendiente de Asignación';
+      fechaMostrar = 'Pronto será contactado para asignar fecha y hora.';
+    }
+
+    // ===============================
+    // 3. Respuesta final
+    // ===============================
     return {
       codigo: reserva.cod_trazabilidad,
-      // (CORRECCIÓN 2) Leer del array 'mascotas'
-      mascota: reserva.pedido.usuario.mascotas[0]?.nombre_mascota || 'Mascota',
-      fecha: reserva.pedido.fecha_pedido.toLocaleDateString('es-CL'),
-      estado: reserva.estado_reserva, 
+      mascota: reserva.detalle_reserva?.nombre_servicio || 'N/A',
+      fecha: fechaMostrar,
+      estado: computedStatus
     };
 
   } catch (error: any) {
-    console.error("Error en API de tracking:", error);
+    console.error('Error en API de tracking:', error);
     if (error.statusCode) throw error;
-    throw createError({ statusCode: 500, statusMessage: 'Error interno del servidor.' });
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Error interno del servidor.'
+    });
   }
 });
