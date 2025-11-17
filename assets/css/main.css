@@ -1,0 +1,8 @@
+/* Importa las directivas base de Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* * Agrega aquí cualquier estilo global personalizado que necesite tu aplicación.
+ * Por ejemplo, fuentes, o estilos de componentes que no sean de Tailwind.
+ */
