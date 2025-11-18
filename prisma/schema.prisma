@@ -76,29 +76,29 @@ model Producto {
 // ================================================================
 
 model Pedido {
-  id_pedido     Int      @id @default(autoincrement())
-  id_usuario    Int
-  id_pago       Int?     @unique
-  fecha_pedido  DateTime @default(now())
-  precio_total  Decimal  @db.Decimal(10, 2)
-  estado_pedido String   @default("Pendiente")
-  es_reserva    Boolean
+  id_pedido       Int             @id @default(autoincrement())
+  id_usuario      Int
+  id_pago         Int?            @unique
+  fecha_pedido    DateTime        @default(now())
+  precio_total    Decimal         @db.Decimal(10, 2)
+  estado_pedido   String          @default("Pendiente")
+  es_reserva      Boolean
 
-  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
-  pago    Pago?   @relation(fields: [id_pago], references: [id_pago])
-  reserva Reserva?
-  envio   Envio?
+  usuario         Usuario         @relation(fields: [id_usuario], references: [id_usuario])
+  pago            Pago?           @relation(fields: [id_pago], references: [id_pago])
+  reserva         Reserva?        @relation("PedidoToReserva") 
+  envio           Envio?
   detalles_pedido DetallePedido[]
 
   @@map("pedido")
 }
 
 model DetallePedido {
-  id_detalle_pedido Int     @id @default(autoincrement())
+  id_detalle_pedido Int      @id @default(autoincrement())
   id_pedido         Int
   cod_producto      Int
   cantidad          Int
-  precio_unitario   Decimal @db.Decimal(10, 2)
+  precio_unitario   Decimal  @db.Decimal(10, 2)
 
   pedido   Pedido   @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
   producto Producto @relation(fields: [cod_producto], references: [cod_producto])
@@ -122,23 +122,21 @@ model Pago {
 }
 
 model Reserva {
-  id_reserva         Int       @id @default(autoincrement())
-  id_pedido          Int       @unique
-  cod_trazabilidad   String?    @unique @db.Char(9)
+  id_reserva         Int              @id @default(autoincrement())
+  id_pedido          Int              @unique
+  cod_trazabilidad   String?          @unique @db.Char(9)
   fecha_reservada    DateTime?
   hora_reservada     DateTime?
-  estado_reserva     String    @default("Pendiente")
-  precio_total Decimal @db.Decimal(10, 2)
-  region             String?   @db.VarChar(100)
-  comuna             String?   @db.VarChar(100)
-  direccion          String?   @db.VarChar(255)
+  estado_reserva     String           @default("Pendiente")
+  precio_total       Decimal          @db.Decimal(10, 2)
+  region             String?          @db.VarChar(100)
+  comuna             String?          @db.VarChar(100)
+  direccion          String?          @db.VarChar(255)
 
-  pedido Pedido @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
+  pedido             Pedido           @relation("PedidoToReserva", fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
   
-  // (CORRECCION) AÑADIDO FK para la relación con Detalle_Reserva
   id_detalle_reserva Int? 
-  detalle_reserva Detalle_Reserva? @relation("ReservaToDetalle", fields: [id_detalle_reserva], references: [id_detalle_reserva])
-
+  detalle_reserva    Detalle_Reserva? @relation("ReservaToDetalle", fields: [id_detalle_reserva], references: [id_detalle_reserva])
 
   @@map("reserva")
 }
@@ -184,12 +182,10 @@ model Detalle_Reserva {
   cantidad           Int?
   precio_total       Decimal?  @db.Decimal(10, 2)
   cod_producto       Int?
-  
+
   producto           Producto? @relation("ProductToDetalleReserva", fields: [cod_producto], references: [cod_producto], onDelete: NoAction, onUpdate: NoAction) 
-  
-  // (CORRECCION) AÑADIDO: Back-reference al modelo Reserva
-  reserva Reserva[] @relation("ReservaToDetalle")
-  
+  reserva            Reserva[] @relation("ReservaToDetalle")
+
   @@map("detalle_reserva") 
 }
 

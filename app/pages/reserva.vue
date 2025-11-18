@@ -1,11 +1,12 @@
 <template>
   <div class="pt-14 py-20 min-h-screen container mx-auto px-4">
+
     <div class="max-w-4xl mx-auto">
+
       <div class="text-center mb-10">
         <h1 class="text-4xl font-extrabold text-purple-dark mb-3">Finalizar Pedido</h1>
         <p class="text-lg text-gray-600">
-          Complete los datos requeridos para su
-          {{ isServiceOrder ? 'Reserva de Servicio' : 'Entrega de Productos' }}.
+          Complete los datos requeridos para su {{ isServiceOrder ? 'Reserva de Servicio' : 'Entrega de Productos' }}.
         </p>
       </div>
 
@@ -17,7 +18,9 @@
       </div>
 
       <form @submit.prevent="confirmarPago" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
         <div class="lg:col-span-2 space-y-8">
+
           <!-- Datos Mascota (solo si es servicio) -->
           <div v-if="isServiceOrder" class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-dark">
             <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">1. Datos de la Mascota</h2>
@@ -73,12 +76,14 @@
               </div>
             </div>
           </div>
+
         </div>
 
         <!-- Resumen -->
         <div class="lg:col-span-1">
           <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-bd-gold-accent sticky top-24">
             <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">Resumen</h2>
+
             <ul class="space-y-2 mb-4 max-h-48 overflow-y-auto">
               <li v-for="item in cart" :key="item.id" class="flex justify-between items-center text-sm">
                 <span class="text-gray-700">{{ item.nombre }} x{{ item.quantity }}</span>
@@ -105,6 +110,7 @@
         </div>
 
       </form>
+
     </div>
   </div>
 </template>
@@ -144,43 +150,31 @@ onMounted(() => {
   }
 });
 
-// --- Confirmar Pago (crea pedido y reserva) ---
+// --- Confirmar Pago (usa endpoint /api/pedidos) ---
 const confirmarPago = async () => {
   isLoading.value = true;
   errorMessage.value = '';
 
   try {
-    // 1️⃣ Crear pedido primero
-    const nuevoPedido: any = await $fetch('/api/pedidos', {
-      method: 'POST',
-      body: {
-        userId: user.value?.id_usuario,
-        cart: cart.value,
-        total: totalGeneral.value,
-      },
-    });
-
-    // 2️⃣ Crear reserva vinculada al pedido
-    const bodyPayload = {
-      id_reserva: undefined,
-      estado_reserva: isServiceOrder.value ? 'En Proceso' : 'Preparando Pedido',
-      cod_trazabilidad: null,
-      precio_total: cartTotal.value,
-      id_pedido: nuevoPedido.id, // <-- Usamos id del pedido recién creado
-      fecha_reservada: isServiceOrder.value ? new Date().toISOString() : undefined,
-      hora_reservada: isServiceOrder.value ? new Date().toISOString() : undefined,
-      region: formDireccion.value.region,
-      comuna: formDireccion.value.comuna,
-      direccion: formDireccion.value.direccion,
+    const payload = {
+      userId: user.value?.id_usuario,
+      productos: cart.value.map(p => ({ id_producto: p.id, quantity: p.quantity })),
+      servicio: isServiceOrder.value ? {
+        petName: formMascota.value.petName,
+        petWeight: formMascota.value.petWeight,
+        petAge: formMascota.value.petAge,
+        direccion: formDireccion.value
+      } : null,
+      metodoEntrega: formEntrega.value.deliveryType,
     };
 
-    const response = await $fetch('/api/admin/editar-reserva', {
-      method: 'PUT',
-      body: bodyPayload
+    const response = await $fetch('/api/pedidos', {
+      method: 'POST',
+      body: payload
     });
 
     clearCart();
-    alert('Pago confirmado y reserva creada!');
+    alert('Pago confirmado y pedido creado!');
     router.push(response.cod_trazabilidad ? `/tracking?codigo=${response.cod_trazabilidad}` : '/');
 
   } catch (err: any) {
@@ -193,46 +187,21 @@ const confirmarPago = async () => {
 </script>
 
 <style scoped>
-/* Inputs */
-.form-input {
+.form-input { 
   width: 100%;
-  padding: 0.75rem; /* equivale a p-3 */
-  border: 1px solid #d1d5db; /* gris claro, como border-gray-300 */
-  border-radius: 0.5rem; /* rounded-lg */
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
   outline: none;
-  box-sizing: border-box;
-  font-size: 1rem;
 }
-
 .form-input:focus {
-  border-color: #5c2a72; /* purple-deep */
-  box-shadow: 0 0 0 2px #5c2a72; /* simulando focus:ring-2 focus:ring-purple-deep */
+  border-color: #5C2A72;
+  box-shadow: 0 0 0 2px rgba(92, 42, 114, 0.3);
 }
-
-/* Colores de texto */
-.text-purple-dark {
-  color: #4A235A;
-}
-
-.text-dark-primary-blue {
-  color: #34495e;
-}
-
-/* Fondos */
-.bg-purple-dark {
-  background-color: #4A235A;
-}
-
-.bg-purple-light {
-  background-color: #6C3483;
-}
-
-.bg-purple-deep {
-  background-color: #5C2A72;
-}
-
-/* Bordes personalizados */
-.border-bd-gold-accent {
-  border-color: #FFD700;
-}
+.text-purple-dark { color: #4A235A; }
+.bg-purple-dark { background-color: #4A235A; }
+.bg-purple-light { background-color: #6C3483; }
+.bg-purple-deep { background-color: #5C2A72; }
+.text-dark-primary-blue { color: #34495e; }
+.border-bd-gold-accent { border-color: #FFD700; }
 </style>

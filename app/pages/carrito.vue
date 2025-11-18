@@ -17,7 +17,11 @@
       <div v-else class="bg-white rounded-xl shadow-2xl overflow-hidden">
         <ul class="divide-y divide-gray-200">
           <li v-for="item in cart" :key="item.id" class="p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between">
+            
             <div class="flex items-center mb-4 sm:mb-0">
+              <input type="checkbox" v-model="item.selected" 
+                     @change="onToggleItem(item)"
+                     class="mr-3 w-5 h-5 text-purple-deep rounded border-gray-300 focus:ring-purple-deep" />
               <div class="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <font-awesome-icon :icon="getIconForProduct(item.tipo)" class="text-3xl text-gray-400" />
               </div>
@@ -69,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import { reactive, computed, toRefs } from 'vue';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { 
   faShoppingCart, faTrash, faPlus, faMinus, 
@@ -77,15 +82,70 @@ import {
 
 library.add(faShoppingCart, faTrash, faPlus, faMinus, faHeart, faBoxOpen, faPuzzlePiece, faPaw);
 
-// (CORRECCIÓN) Se importan todas las funciones necesarias de useCart
-const { cart, cartTotal, removeFromCart, clearCart, increaseQuantity, decreaseQuantity } = useCart();
+interface CartItem {
+  id: number;
+  nombre: string;
+  precio: number;
+  tipo: string;
+  quantity: number;
+  selected: boolean;
+}
 
-const getIconForProduct = (tipo: string) => {
+// Usamos el hook original
+const rawCart = useCart();
+
+// Creamos un reactive copy para poder usar map, reduce, etc.
+const cart = reactive<CartItem[]>(rawCart.cart.value.map(i => ({ ...i, selected: true })));
+
+const cartTotal = computed(() => 
+  cart.reduce((sum, item) => sum + (item.selected ? item.precio * item.quantity : 0), 0)
+);
+
+function getIconForProduct(tipo: string) {
   if (tipo === 'Servicio') return faHeart;
   if (tipo === 'Urna') return faBoxOpen;
   if (tipo === 'Accesorio') return faPuzzlePiece;
   return faPaw;
-};
+}
+
+function removeFromCart(id: number) {
+  const index = cart.findIndex(i => i.id === id);
+  if (index !== -1) cart.splice(index, 1);
+  rawCart.removeFromCart(id);
+}
+
+function increaseQuantity(id: number) {
+  const item = cart.find(i => i.id === id);
+  if (item) {
+    item.quantity++;
+    rawCart.increaseQuantity(id);
+  }
+}
+
+function decreaseQuantity(id: number) {
+  const item = cart.find(i => i.id === id);
+  if (item && item.quantity > 1) {
+    item.quantity--;
+    rawCart.decreaseQuantity(id);
+  }
+}
+
+function clearCart() {
+  cart.splice(0, cart.length);
+  rawCart.clearCart();
+}
+
+// Lógica para marcar/desmarcar
+function onToggleItem(toggledItem: CartItem) {
+  if (toggledItem.tipo === 'Servicio' && toggledItem.selected) {
+    // Desmarcar otros servicios
+    cart.forEach(item => {
+      if (item.id !== toggledItem.id && item.tipo === 'Servicio') {
+        item.selected = false;
+      }
+    });
+  }
+}
 </script>
 
 <style scoped lang="postcss">

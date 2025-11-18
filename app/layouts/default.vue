@@ -5,8 +5,9 @@
       <div class="container mx-auto px-4 flex items-center justify-between text-white h-14">
         
         <div class="flex-shrink-0">
-            <NuxtLink to="/" class="flex items-center p-2 bg-white rounded-lg shadow-md">
-                <img src="/logo2.png" alt="Crematorio San Antonio Logo" class="h-10">
+            <NuxtLink to="/" class="flex items-center p-2 bg-white rounded-lg shadow-md ">
+                <img src="/logo.png" alt="Crematorio San Antonio Logo" class="h-10">
+                <img src="/sanantonio.png" alt="Crematorio San Antonio Logo" class="h-10">
             </NuxtLink>
         </div>
 
@@ -186,7 +187,7 @@
                 <font-awesome-icon icon="fab fa-cc-mastercard" title="Mastercard" class="hover:text-white transition" />
                 <font-awesome-icon icon="fas fa-money-check-alt" title="Transferencia" class="hover:text-white transition" />
             </div>
-            <p class="text-sm text-white pt-2">Aceptamos transferencias y tarjetas de crédito principales.</p>
+            <p class="text-sm text-white pt-2">Aceptamos transferencias y tarjetas de crédito.</p>
         </div>
 
         <div class="md:w-1/4 space-y-4 text-center md:text-left">
