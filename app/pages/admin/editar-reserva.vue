@@ -91,7 +91,7 @@
             </button>
             
             <div class="space-x-3">
-                <button type="button" @click="router.push('/admin/reservas')" 
+                <button type="button" @click="router.push('/admin/dashboard')" 
                         :disabled="isDeleting || isSaving"
                         class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150">
                     Cancelar
@@ -201,7 +201,7 @@ const guardarCambios = async () => {
 
     saveMessage.value = '¡Reserva actualizada con éxito! Redirigiendo...';
     setTimeout(() => {
-      router.push('/admin/reservas');
+      router.push('/admin/dashboard');
     }, 2000);
 
   } catch (err: any) {
@@ -234,7 +234,7 @@ const handleDelete = async () => {
     saveMessage.value = response.message + ' Redirigiendo...';
     
     setTimeout(() => {
-      router.push('/admin/reservas');
+      router.push('/admin/reserva');
     }, 2000);
 
   } catch (err: any) {

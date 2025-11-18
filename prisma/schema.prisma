@@ -210,13 +210,11 @@ model Mascota {
 }
 
 model Especie {
-  id_especie     Int       @id @default(autoincrement())
-  tipo_mascota   String?   @db.VarChar(100)
-  nombre_especie String?   @db.VarChar(100)
-  raza           String?   @db.VarChar(100)
+  id_especie     Int      @id @default(autoincrement())
+  tipo_mascota   String?
+  nombre_especie String?
+  raza           String?
   mascota        Mascota[]
-  
-  @@map("especie")
 }
 
 model Proveedor {
