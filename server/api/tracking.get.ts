@@ -3,75 +3,84 @@ import { db } from '../utils/prisma';
 
 export default defineEventHandler(async (event) => {
   try {
-    const q = getQuery(event);
-    const codigo = q.codigo as string | undefined;
-    const id = q.id ? Number(q.id as string) : undefined;
+    const query = getQuery(event);
+    const codigo = query.codigo as string | undefined;
 
-    if (!codigo && !id) {
-      throw createError({ statusCode: 400, statusMessage: 'Proporciona codigo o id' });
+    if (!codigo) {
+      throw createError({ statusCode: 400, statusMessage: 'Falta el código de trazabilidad.' });
     }
 
-    const where = codigo ? { cod_trazabilidad: codigo } : { id_reserva: id! };
-
-    const reserva = await db.reserva.findFirst({
-      where,
+    // Buscar la reserva asociada al código de trazabilidad
+    const pedido = await db.pedido.findFirst({
+      where: {
+        reserva: { cod_trazabilidad: codigo },
+      },
       include: {
-        pedido: {
-          include: {
-            pago: true,
-            usuario: true,
-          }
+        reserva: true,
+        usuario: true,
+        detalles_pedido: {
+          include: { producto: true }
         },
-        detalle_reserva: true,
-      }
+      },
     });
 
-    if (!reserva) {
-      throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada' });
+    if (!pedido) {
+      throw createError({ statusCode: 404, statusMessage: 'Código no encontrado.' });
     }
 
-    // Resolver estado final para UI
-    const pago = reserva.pedido?.pago ?? null;
-    // Prioridad: pago Cancelado -> Cancelado
-    let estado: string = reserva.estado_reserva ?? 'Pendiente';
+    // --- Determinar estado legible ---
+    let estado: string = 'Pendiente'; // valor por defecto seguro
 
-    if (pago?.estado === 'Cancelado' || pago?.estado === 'Fallido') {
-      estado = 'Cancelado';
-    } else if (reserva.estado_reserva === 'Finalizado') {
-      estado = 'Finalizado';
-    } else if (reserva.fecha_reservada && reserva.hora_reservada) {
-      // Si hay fecha/hora y no está finalizada ni cancelada, consideramos "En Proceso"
-      estado = 'En Proceso';
-    } else if (pago?.estado === 'Pendiente') {
-      estado = 'Pendiente';
+    if (pedido.reserva) {
+      // Caso: reserva de servicio
+      switch (pedido.reserva.estado_reserva) {
+        case 'Pendiente':
+          estado = 'Pendiente';
+          break;
+        case 'Confirmada':
+        case 'En Proceso':
+          estado = 'En Proceso';
+          break;
+        case 'Finalizada':
+          estado = 'Finalizado';
+          break;
+        default:
+          estado = pedido.reserva.estado_reserva || 'Pendiente';
+      }
+    } else {
+      // Caso: pedido normal de producto
+      switch (pedido.estado_pedido) {
+        case 'Pendiente':
+          estado = 'Preparando pedido';
+          break;
+        case 'Pagado':
+        case 'En Proceso':
+          estado = 'En tránsito';
+          break;
+        case 'Finalizado':
+          estado = 'Llegó a destino';
+          break;
+        case 'Cancelado':
+          estado = 'Cancelado';
+          break;
+        default:
+          estado = pedido.estado_pedido || 'Pendiente';
+      }
     }
 
-    // Mascota/servicio: preferimos detalle_reserva.nombre_servicio
-    const mascota = reserva.detalle_reserva?.nombre_servicio ?? reserva.pedido?.usuario?.nombre ?? 'N/A';
-
-    // Fecha amigable
-    let fechaMostrar = 'No asignada';
-    if (reserva.fecha_reservada && reserva.hora_reservada) {
-      const fecha = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
-      const hora = new Date(reserva.hora_reservada).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-      fechaMostrar = `${fecha} a las ${hora}`;
-    } else if (reserva.fecha_reservada) {
-      fechaMostrar = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
-    }
-
+    // --- Respuesta ---
     return {
-      codigo: reserva.cod_trazabilidad ?? null,
-      mascota,
-      fecha: fechaMostrar,
+      codigo: pedido.reserva?.cod_trazabilidad || 'N/A',
+      mascota: pedido.detalles_pedido[0]?.producto?.nombre_producto || 'Producto',
+      fecha: pedido.reserva?.fecha_reservada?.toISOString().split('T')[0] || 'N/A',
       estado,
-      precio_total: reserva.precio_total?.toString?.() ?? null,
-      pago: pago ? { id_pago: pago.id_pago, estado: pago.estado, monto: pago.monto?.toString?.() } : null,
-      servicio: reserva.detalle_reserva?.nombre_servicio ?? null,
     };
 
   } catch (error: any) {
-    console.error('Error en tracking.get:', error);
-    if (error?.statusCode) throw error;
-    throw createError({ statusCode: 500, statusMessage: 'Error interno en tracking.' });
+    console.error('Error en tracking:', error);
+    throw createError({
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Error interno al consultar el tracking.',
+    });
   }
 });

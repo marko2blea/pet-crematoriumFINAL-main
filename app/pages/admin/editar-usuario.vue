@@ -99,68 +99,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect, computed } from 'vue'; // (MODIFICADO) Añadido 'computed'
+import { ref, watchEffect, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { User, Rol } from '../../../app/types'; // (MODIFICADO) Ruta relativa
 
-// 1. Proteger esta página
-definePageMeta({
-  middleware: 'auth'
-});
+definePageMeta({ middleware: 'auth' });
 
 const route = useRoute();
 const router = useRouter();
 const usuarioId = ref(route.query.id as string);
 
-// (MODIFICADO) Interfaz completa (Usuario + Rol)
+// --- Tipos ---
 interface UserForm {
-    id_usuario: number;
-    nombre: string;
-    apellido_paterno: string;
-    apellido_materno: string | null;
-    correo: string;
-    telefono: number | null;
-    region: string | null;
-    comuna: string | null;
-    direccion: string | null;
-    id_rol: number; // Campo de Rol
+  id_usuario: number;
+  nombre: string;
+  apellido_paterno: string;
+  apellido_materno: string | null;
+  correo: string;
+  telefono: number | null;
+  region: string | null;
+  comuna: string | null;
+  direccion: string | null;
+  id_rol: number;
 }
 
-// (NUEVO) Interfaz para la respuesta de la API
+interface Rol {
+  id_rol: number;
+  nombre_rol: string;
+}
+
 interface DetalleUsuarioResponse {
-  usuario: User;
+  usuario: UserForm;
   rolesDisponibles: Rol[];
 }
 
-// --- Estado del Formulario ---
+// --- Estado ---
 const form = ref<UserForm | null>(null);
 const isSaving = ref(false);
 const saveMessage = ref('');
 const saveError = ref(false);
 
-// (ELIMINADO) La llamada a /api/roles se borra, ya que es redundante
-// const { data: roles, pending: pendingRoles } = ...
-
-// --- (MODIFICADO) Carga de Datos ---
-// Ahora cargamos todo (usuario + roles) en una sola llamada
+// --- Cargar Datos ---
 const { data: loadedData, pending, error } = await useAsyncData<DetalleUsuarioResponse>(
   'usuario-detalle',
-  () => {
+  async () => {
     if (!usuarioId.value) throw createError({ statusCode: 400, statusMessage: 'Falta ID de usuario' });
-    return $fetch('../api/admin/usuario-detalle', { query: { id: usuarioId.value } })
+    return await $fetch<DetalleUsuarioResponse>('/api/admin/usuario-detalle', { query: { id: usuarioId.value } });
   },
   { watch: [usuarioId] }
 );
 
-// (NUEVO) 'roles' ahora es un 'computed' que lee la data cargada
-const roles = computed(() => {
-  return loadedData.value?.rolesDisponibles || [];
-});
+const roles = computed(() => loadedData.value?.rolesDisponibles || []);
 
-// (MODIFICADO) Rellenar el formulario
 watchEffect(() => {
-  // Ahora leemos desde 'loadedData.value.usuario'
-  if (loadedData.value && loadedData.value.usuario) {
+  if (loadedData.value?.usuario) {
     const usuario = loadedData.value.usuario;
     form.value = {
       id_usuario: usuario.id_usuario,
@@ -172,12 +163,12 @@ watchEffect(() => {
       region: usuario.region,
       comuna: usuario.comuna,
       direccion: usuario.direccion,
-      id_rol: usuario.id_rol || 1, // Asigna 1 (Cliente) si es nulo
+      id_rol: usuario.id_rol || 1,
     };
   }
 });
 
-// --- Guardar Cambios (Sin cambios) ---
+// --- Guardar Cambios ---
 const guardarCambios = async () => {
   if (!form.value) return;
 
@@ -207,7 +198,6 @@ const guardarCambios = async () => {
 </script>
 
 <style scoped lang="postcss">
-/* (Estilos sin cambios) */
 .text-purple-dark { color: #4A235A; }
 .bg-purple-dark { background-color: #4A235A; } 
 .text-purple-deep { color: #5C2A72; } 
@@ -226,7 +216,7 @@ const guardarCambios = async () => {
 .border-red-300 { border-color: #f5c6cb; }
 .bg-red-50 { background-color: #fef2f2; }
 
-/* (NUEVO) Clase reutilizable para inputs */
+/* Clase reutilizable para inputs */
 .form-input {
   @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-deep focus:border-purple-deep;
 }
