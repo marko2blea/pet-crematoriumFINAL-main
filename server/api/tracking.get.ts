@@ -1,107 +1,77 @@
+// server/api/tracking.get.ts
 import { db } from '../utils/prisma';
 
-/**
- * API PÚBLICA para que los clientes rastreen sus servicios.
- * Ruta: /api/tracking
- * Método: GET
- */
 export default defineEventHandler(async (event) => {
   try {
-    const query = getQuery(event);
-    const codigo = query.codigo as string | undefined;
+    const q = getQuery(event);
+    const codigo = q.codigo as string | undefined;
+    const id = q.id ? Number(q.id as string) : undefined;
 
-    if (!codigo) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Debe proporcionar un código de trazabilidad.'
-      });
+    if (!codigo && !id) {
+      throw createError({ statusCode: 400, statusMessage: 'Proporciona codigo o id' });
     }
 
-    // ===============================
-    // 1. Buscar la reserva por código
-    // ===============================
+    const where = codigo ? { cod_trazabilidad: codigo } : { id_reserva: id! };
+
     const reserva = await db.reserva.findFirst({
-      where: { cod_trazabilidad: codigo },
+      where,
       include: {
-        // RELACIÓN CORRECTA: Reserva → Pedido → Pago / Usuario
         pedido: {
           include: {
-            pago: { select: { estado: true } },
-            usuario: {
-              select: {
-                nombre: true,
-                apellido_paterno: true
-              }
-            }
+            pago: true,
+            usuario: true,
           }
         },
-        // RELACIÓN CORRECTA: Reserva → Detalle_Reserva
-        detalle_reserva: {
-          select: { nombre_servicio: true }
-        }
+        detalle_reserva: true,
       }
     });
 
     if (!reserva) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Código no encontrado. Verifique el código e intente de nuevo.'
-      });
+      throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada' });
     }
 
-    // ===============================
-    // 2. Lógica de estado
-    // ===============================
-    let computedStatus: string;
-    let fechaMostrar: string;
+    // Resolver estado final para UI
+    const pago = reserva.pedido?.pago ?? null;
+    // Prioridad: pago Cancelado -> Cancelado
+    let estado: string = reserva.estado_reserva ?? 'Pendiente';
 
-    const pago = reserva.pedido?.pago;
-    const isCanceled = pago?.estado === 'Cancelado';
-
-    if (isCanceled) {
-      computedStatus = 'Cancelado';
-      fechaMostrar = 'Reserva Anulada';
+    if (pago?.estado === 'Cancelado' || pago?.estado === 'Fallido') {
+      estado = 'Cancelado';
+    } else if (reserva.estado_reserva === 'Finalizado') {
+      estado = 'Finalizado';
     } else if (reserva.fecha_reservada && reserva.hora_reservada) {
-      // Pago OK → Fecha & hora asignadas
-      computedStatus = reserva.estado_reserva === 'Finalizado'
-        ? 'Finalizado'
-        : 'Confirmado';
-
-      const fecha = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
-      const hora = new Date(reserva.hora_reservada).toLocaleTimeString('es-CL', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC'
-      });
-
-      fechaMostrar = `Fecha de ${
-        computedStatus === 'Finalizado' ? 'Entrega' : 'Retiro'
-      }: ${fecha} a las ${hora} (CL)`;
+      // Si hay fecha/hora y no está finalizada ni cancelada, consideramos "En Proceso"
+      estado = 'En Proceso';
     } else if (pago?.estado === 'Pendiente') {
-      computedStatus = 'Pendiente de Pago';
-      fechaMostrar = 'Esperando confirmación de pago. Su cupo está reservado.';
-    } else {
-      computedStatus = 'Pendiente de Asignación';
-      fechaMostrar = 'Pronto será contactado para asignar fecha y hora.';
+      estado = 'Pendiente';
     }
 
-    // ===============================
-    // 3. Respuesta final
-    // ===============================
+    // Mascota/servicio: preferimos detalle_reserva.nombre_servicio
+    const mascota = reserva.detalle_reserva?.nombre_servicio ?? reserva.pedido?.usuario?.nombre ?? 'N/A';
+
+    // Fecha amigable
+    let fechaMostrar = 'No asignada';
+    if (reserva.fecha_reservada && reserva.hora_reservada) {
+      const fecha = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
+      const hora = new Date(reserva.hora_reservada).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+      fechaMostrar = `${fecha} a las ${hora}`;
+    } else if (reserva.fecha_reservada) {
+      fechaMostrar = new Date(reserva.fecha_reservada).toLocaleDateString('es-CL');
+    }
+
     return {
-      codigo: reserva.cod_trazabilidad,
-      mascota: reserva.detalle_reserva?.nombre_servicio || 'N/A',
+      codigo: reserva.cod_trazabilidad ?? null,
+      mascota,
       fecha: fechaMostrar,
-      estado: computedStatus
+      estado,
+      precio_total: reserva.precio_total?.toString?.() ?? null,
+      pago: pago ? { id_pago: pago.id_pago, estado: pago.estado, monto: pago.monto?.toString?.() } : null,
+      servicio: reserva.detalle_reserva?.nombre_servicio ?? null,
     };
 
   } catch (error: any) {
-    console.error('Error en API de tracking:', error);
-    if (error.statusCode) throw error;
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Error interno del servidor.'
-    });
+    console.error('Error en tracking.get:', error);
+    if (error?.statusCode) throw error;
+    throw createError({ statusCode: 500, statusMessage: 'Error interno en tracking.' });
   }
 });
