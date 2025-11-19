@@ -1,265 +1,239 @@
+<!-- app/pages/admin/inventario.vue -->
 <template>
-  <div class="pt-14 py-20 min-h-screen container mx-auto px-4">
-    
-    <div class="flex justify-between items-center mb-8 border-b-2 border-gray-300 pb-3">
-        <h1 class="text-3xl font-bold text-purple-dark">Gestión de Inventario</h1>
-        <NuxtLink to="/admin/agregar-producto">
-            <button class="bg-purple-deep text-white py-2 px-5 rounded-lg font-bold hover:bg-purple-light transition duration-150 shadow-lg flex items-center space-x-2">
-                <font-awesome-icon icon="fas fa-plus-circle" />
-                <span>Añadir Producto</span>
-            </button>
-        </NuxtLink>
-    </div>
-
-    <div v-if="feedbackMessage" 
-         :class="isError ? 'bg-red-100 text-red-700 border-red-300' : 'bg-green-100 text-green-700 border-green-300'"
-         class="mb-6 p-4 rounded-lg border text-sm font-medium text-center">
-        {{ feedbackMessage }}
-    </div>
-
-    <div v-if="pending" class="text-center py-10 bg-white-subtle rounded-xl shadow-md">
-        <p class="text-xl text-gray-600 font-semibold">Cargando inventario...</p>
-    </div>
-    
-    <div v-else-if="error" class="text-center py-10 bg-red-100 rounded-xl shadow-md">
-        <p class="text-xl text-red-700 font-semibold">Error al cargar el inventario: {{ error.statusMessage }}</p>
-    </div>
-
-    <div v-else class="bg-white rounded-xl shadow-2xl overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-purple-dark text-white">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Nombre</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Tipo</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Stock</th>
-                        <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider">Precio</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Disponible</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody v-if="inventarioData && inventarioData.productos.length > 0" class="bg-white divide-y divide-gray-200">
-                    <tr v-for="producto in inventarioData.productos" :key="producto.id" class="hover:bg-purple-card transition duration-150">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-deep">{{ producto.id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-dark-primary-blue">{{ producto.nombre }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full" 
-                                  :class="getBadgeClass(producto.tipo)">
-                                {{ producto.tipo }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold"
-                            :class="producto.stock > 0 ? 'text-gray-700' : 'text-red-600'">
-                            {{ producto.stock }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">{{ producto.precio.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
-                            <span :class="producto.disponible ? 'text-green-500' : 'text-red-600'" class="text-2xl">
-                                <font-awesome-icon :icon="producto.disponible ? 'fas fa-check-circle' : 'fas fa-times-circle'" />
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                            <button @click="editProducto(producto.id)" class="text-purple-deep hover:text-purple-light transition" title="Editar">
-                                <font-awesome-icon icon="fas fa-pencil-alt" class="text-lg" />
-                            </button>
-                            <button @click="deleteProducto(producto.id, producto.nombre)" class="text-red-600 hover:text-red-800 transition" title="Eliminar">
-                                <font-awesome-icon icon="fas fa-trash-alt" class="text-lg" />
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-                <tbody v-else>
-                    <tr>
-                        <td colspan="7" class="text-center py-10 text-gray-500">No se encontraron productos.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+  <div class="pt-14 py-10 px-4 min-h-screen bg-gray-50">
+    <div class="container mx-auto max-w-7xl">
+      <div class="flex justify-between items-center mb-6 border-b pb-3">
+        <h1 class="text-3xl font-bold text-purple-dark">Inventario de Productos y Servicios</h1>
         
-        <div v-if="totalPages > 1" class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <span class="text-sm text-gray-700">
-                Mostrando <span class="font-semibold">{{ (currentPage - 1) * 10 + 1 }}</span>
-                a <span class="font-semibold">{{ Math.min(currentPage * 10, totalCount) }}</span>
-                de <span class="font-semibold">{{ totalCount }}</span> productos
-            </span>
-            <div class="inline-flex -space-x-px rounded-md shadow-sm">
-                <button
-                    @click="changePage(currentPage - 1)"
-                    :disabled="currentPage === 1"
-                    class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <font-awesome-icon icon="fas fa-chevron-left" class="w-3 h-3" />
-                </button>
-                <span class="px-4 py-2 leading-tight text-purple-deep bg-purple-100 border border-purple-300 font-semibold z-10">
-                    Página {{ currentPage }} de {{ totalPages }}
-                </span>
-                <button
-                    @click="changePage(currentPage + 1)"
-                    :disabled="currentPage === totalPages"
-                    class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <font-awesome-icon icon="fas fa-chevron-right" class="w-3 h-3" />
-                </button>
-            </div>
+        <button @click="agregarProducto" class="bg-purple-deep text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-light transition shadow-md">
+          <font-awesome-icon icon="fas fa-plus" class="mr-2" />
+          Añadir Ítem
+        </button>
+      </div>
+
+      <div v-if="pending" class="text-center py-20 text-gray-600">
+        Cargando inventario...
+      </div>
+
+      <div v-else-if="isError" class="text-center py-10 bg-red-50 rounded-xl shadow-lg border border-red-300">
+        <p class="text-red-700 text-lg font-semibold">{{ feedbackMessage }}</p>
+      </div>
+
+      <div v-else>
+        
+        <!-- SECCION SERVICIOS -->
+        <h2 class="text-2xl font-bold text-purple-deep mt-10 mb-4 flex items-center space-x-2">
+            <font-awesome-icon icon="fas fa-heart" class="text-purple-deep"/>
+            <span>Servicios Activos ({{ servicios.length }})</span>
+        </h2>
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden mb-12">
+          <table class="w-full">
+            <thead class="bg-purple-deep text-white">
+              <tr>
+                <th class="py-3 px-4 text-left w-2/5">Nombre</th>
+                <th class="py-3 px-4 text-left">Tipo</th>
+                <th class="py-3 px-4 text-left">Precio</th>
+                <th class="py-3 px-4 text-left">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in servicios" :key="p.id" class="border-b last:border-b-0 hover:bg-gray-50 transition">
+                <td class="py-3 px-4 font-semibold text-gray-800">{{ p.nombre }}</td>
+                <td class="py-3 px-4"><span :class="getTypeBadgeClass(p.tipo)">{{ p.tipo }}</span></td>
+                <td class="py-3 px-4 font-extrabold text-purple-dark">${{ p.precio.toLocaleString('es-CL') }}</td>
+                <td class="py-3 px-4 space-x-2">
+                  <button @click="editarProducto(p.id)" class="bg-purple-deep text-white px-3 py-1 rounded-lg text-sm hover:bg-purple-light transition">Editar</button>
+                  <button @click="eliminarProducto(p.id)" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600 transition">Eliminar</button>
+                </td>
+              </tr>
+              <tr v-if="servicios.length === 0">
+                <td colspan="5" class="text-center py-6 text-gray-500">No hay servicios disponibles</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
+        <!-- SECCION PRODUCTOS FÍSICOS (Urnas y Accesorios) -->
+        <h2 class="text-2xl font-bold text-purple-deep mb-4 flex items-center space-x-2">
+            <font-awesome-icon icon="fas fa-box" class="text-purple-deep"/>
+            <span>Productos Físicos ({{ productos.length }})</span>
+        </h2>
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden mb-12">
+          <table class="w-full">
+            <thead class="bg-purple-deep text-white">
+              <tr>
+                <th class="py-3 px-4 text-left w-2/5">Nombre</th>
+                <th class="py-3 px-4 text-left">Tipo</th>
+                <th class="py-3 px-4 text-left">Stock</th>
+                <th class="py-3 px-4 text-left">Precio</th>
+                <th class="py-3 px-4 text-left">Disponible</th>
+                <th class="py-3 px-4 text-left">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in productos" :key="p.id" class="border-b last:border-b-0 hover:bg-gray-50 transition">
+                <td class="py-3 px-4 font-semibold text-gray-800">{{ p.nombre }}</td>
+                <td class="py-3 px-4"><span :class="getTypeBadgeClass(p.tipo)">{{ p.tipo }}</span></td>
+                <td class="py-3 px-4 font-semibold" :class="p.stock < 5 ? 'text-red-600' : 'text-gray-700'">{{ p.stock }}</td>
+                <td class="py-3 px-4">${{ p.precio.toLocaleString('es-CL') }}</td>
+                <td class="py-3 px-4 text-sm font-semibold" :class="p.disponible ? 'text-green-600' : 'text-red-600'">{{ p.disponible ? 'Sí' : 'No' }}</td>
+                <td class="py-3 px-4 space-x-2">
+                  <button @click="editarProducto(p.id)" class="bg-purple-deep text-white px-3 py-1 rounded-lg text-sm hover:bg-purple-light transition">Editar</button>
+                  <button @click="eliminarProducto(p.id)" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600 transition">Eliminar</button>
+                </td>
+              </tr>
+              <tr v-if="productos.length === 0">
+                <td colspan="6" class="text-center py-6 text-gray-500">No hay productos físicos disponibles</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación simple (Muestra la paginación general) -->
+        <div class="flex justify-center mt-6 space-x-4">
+          <button @click="currentPage > 1 && cambiarPagina(currentPage - 1)" 
+                  :disabled="currentPage === 1" 
+                  class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            Anterior
+          </button>
+          <span class="px-4 py-2 bg-gray-100 rounded-lg">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button @click="currentPage < totalPages && cambiarPagina(currentPage + 1)" 
+                  :disabled="currentPage >= totalPages" 
+                  class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            Siguiente
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { 
-    faPlusCircle, faPencilAlt, faTrashAlt, 
-    faCheckCircle, faTimesCircle,
-    faChevronLeft, faChevronRight // (NUEVO) Iconos de Paginación
-} from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faHeart, faBox } from '@fortawesome/free-solid-svg-icons'; 
 
-library.add(
-    faPlusCircle, faPencilAlt, faTrashAlt, 
-    faCheckCircle, faTimesCircle,
-    faChevronLeft, faChevronRight
-);
+library.add(faPlus, faHeart, faBox);
 
 definePageMeta({
-  middleware: 'auth' // (Cambiado a 'admin' si ya creaste admin.ts)
+  middleware: 'admin'
 });
 
-const router = useRouter();
-
-// --- (NUEVO) Tipado para la Paginación ---
+// Interfaz para la tabla
 interface ProductoInventario {
   id: number;
   nombre: string;
+  tipo: string;
   stock: number;
   precio: number;
   disponible: boolean;
-  tipo: string;
-  proveedor: string;
-}
-interface InventarioResponse {
-  productos: ProductoInventario[];
-  totalCount: number;
 }
 
-// --- (NUEVO) Estado de Paginación ---
+// Estados reactivos
+const allProducts = ref<ProductoInventario[]>([]); 
+const totalCount = ref(0);
 const currentPage = ref(1);
+const itemsPerPage = 5;
 
 const feedbackMessage = ref('');
 const isError = ref(false);
+const pending = ref(false);
 
-// --- (MODIFICADO) Carga de Datos Paginada ---
-const { 
-  data: inventarioData, 
-  pending, 
-  error, 
-  refresh 
-} = await useAsyncData<InventarioResponse>(
-  'lista-inventario',
-  // La API ahora acepta la página
-  () => $fetch('/api/admin/inventario', { 
-    query: { page: currentPage.value } 
-  }),
-  { 
-    watch: [currentPage] // Se refresca si 'currentPage' cambia
+const router = useRouter();
+
+const totalPages = computed(() => Math.ceil(totalCount.value / itemsPerPage));
+
+// (ESTADOS COMPUTADOS)
+const servicios = computed(() => allProducts.value.filter(p => p.tipo === 'Servicio'));
+const productos = computed(() => allProducts.value.filter(p => p.tipo !== 'Servicio'));
+
+
+const fetchProducto = async () => {
+  pending.value = true;
+  isError.value = false;
+  try {
+    const res = await $fetch<{ producto: ProductoInventario[], totalCount: number }>('/api/admin/inventario', {
+      query: { page: currentPage.value, perPage: itemsPerPage }
+    });
+    allProducts.value = res.producto || []; 
+    totalCount.value = res.totalCount || 0;
+  } catch (err: any) {
+    isError.value = true;
+    feedbackMessage.value = err.data?.statusMessage || 'Error al cargar inventario';
+    allProducts.value = [];
+    totalCount.value = 0;
+  } finally {
+    pending.value = false;
   }
-);
-
-// --- (NUEVO) Lógica de Paginación ---
-const totalCount = computed(() => inventarioData.value?.totalCount || 0);
-const totalPages = computed(() => Math.ceil(totalCount.value / 10));
-
-const changePage = (page: number) => {
-    if (page < 1 || page > totalPages.value) {
-        return;
-    }
-    currentPage.value = page;
 };
 
-// --- Funciones (sin cambios, excepto 'deleteProducto') ---
-
-const editProducto = (id: number) => {
+const editarProducto = (id: number) => {
   router.push(`/admin/editar-producto?id=${id}`);
 };
 
-const deleteProducto = async (id: number, nombre: string) => {
-  feedbackMessage.value = '';
-  isError.value = false;
-  if (!confirm(`¿Estás seguro de eliminar el producto "${nombre}"?`)) {
-    return;
-  }
+const eliminarProducto = async (id: number) => {
+  if (!confirm('¿Deseas eliminar este producto?')) return;
   try {
-    const response: { message: string } = await $fetch('/api/admin/eliminar-producto', {
-      method: 'DELETE',
-      body: { id }
+    await $fetch(`/api/admin/eliminar-producto`, { 
+        method: 'DELETE',
+        body: { id }
     });
-    feedbackMessage.value = response.message;
-    isError.value = false;
-    
-    // (NUEVO) Refrescar la página actual
-    if (inventarioData.value?.productos.length === 1 && currentPage.value > 1) {
-        currentPage.value--; // Ir a la página anterior si era el último ítem
-    } else {
-        refresh(); // Refrescar la página actual
-    }
-
+    fetchProducto(); 
   } catch (err: any) {
-    feedbackMessage.value = err.data?.statusMessage || 'Error al eliminar el producto.';
-    isError.value = true;
+    alert(err.data?.statusMessage || 'Error al eliminar producto');
   }
 };
 
-// Función para color de badge (¡reutilizada!)
-const getBadgeClass = (tipo: string) => {
-    if (!tipo) return 'bg-gray-100 text-gray-800';
-    tipo = tipo.toLowerCase();
-    if (tipo === 'servicio') {
-        return 'bg-purple-100 text-purple-800';
+const agregarProducto = () => {
+  router.push('/admin/agregar-producto');
+};
+
+const cambiarPagina = (page: number) => {
+  currentPage.value = page;
+};
+
+onMounted(() => {
+  fetchProducto();
+});
+
+watch(currentPage, () => {
+  fetchProducto();
+});
+
+// FUNCIÓN PARA ASIGNAR CLASES DE TIPO (COLOR)
+const getTypeBadgeClass = (tipo: string) => {
+    switch (tipo) {
+        case 'Servicio': return 'px-2 py-0.5 rounded-full bg-purple-200 text-purple-deep text-xs font-semibold';
+        case 'Urna': return 'px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold';
+        case 'Accesorio': return 'px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold';
+        default: return 'px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold';
     }
-    if (tipo === 'urna') {
-        return 'bg-yellow-100 text-yellow-800';
-    }
-    if (tipo === 'accesorio') {
-        return 'bg-blue-100 text-blue-800';
-    }
-    return 'bg-gray-100 text-gray-800';
 };
 </script>
 
-<style scoped lang="postcss">
-/* (Estilos sin cambios) */
-.text-purple-dark { color: #4A235A; }
-.bg-purple-dark { background-color: #4A235A; } 
-.text-purple-deep { color: #5C2A72; } 
+<style scoped>
+.text-purple-dark { color: #4A235A; } 
+.bg-purple-dark { background-color: #4A235A; }
 .bg-purple-deep { background-color: #5C2A72; }
-.bg-purple-light { background-color: #6C3483; }
-.text-dark-primary-blue { color: #34495e; }
+.hover\:bg-purple-light:hover { background-color: #6C3483; }
 .bg-white-subtle { background-color: #F8F4FA; }
-.bg-purple-card { background-color: #F8F4FA; }
-.bg-red-100 { background-color: #fef2f2; }
-.text-red-700 { color: #b91c1c; }
-.border-red-300 { border-color: #fca5a5; }
-.bg-green-100 { background-color: #dcfce7; }
-.text-green-700 { color: #15803d; }
-.border-green-300 { border-color: #86efac; }
-.text-red-600 { color: #dc3545; }
-.hover\:text-red-800:hover { color: #a71d2a; }
-.text-green-500 { color: #22c55e; }
-.disabled\:opacity-50:disabled { opacity: 0.5; }
-.disabled\:cursor-not-allowed:disabled { cursor: not-allowed; }
+.bg-red-500 { background-color: #ef4444; }
+.hover\:bg-red-600:hover { background-color: #dc2626; }
 
-/* (NUEVO) Colores de las etiquetas de categoría */
-.bg-purple-100 { background-color: #f3e5f5; }
-.text-purple-800 { color: #6a1b9a; }
-.bg-yellow-100 { background-color: #fffde7; }
-.text-yellow-800 { color: #f57f17; }
-.bg-blue-100 { background-color: #e0f2fe; }
+/* Colores de Badges */
+.bg-purple-200 { background-color: #d8b4fe; }
+.text-purple-deep { color: #5C2A72; } 
+.bg-yellow-100 { background-color: #fff3cd; }
+.text-yellow-800 { color: #b45309; }
+.bg-blue-100 { background-color: #bfdbfe; }
 .text-blue-800 { color: #1e40af; }
-.bg-gray-100 { background-color: #f3f4f6; }
-.text-gray-800 { color: #1f2937; }
+.text-red-600 { color: #dc2626; }
+.text-green-600 { color: #059669; }
+
+/* Estilos de tabla */
+table { border-collapse: separate; border-spacing: 0; }
+th, td { border-left: none !important; }
+th:first-child { border-top-left-radius: 0.5rem; }
+th:last-child { border-top-right-radius: 0.5rem; }
 </style>

@@ -8,7 +8,7 @@ import { db } from '../../utils/prisma';
  */
 export default defineEventHandler(async (event) => {
   try {
-    // (MODIFICADO) Usa PascalCase: db.proveedor
+    // FIX: Acceso a 'db.proveedor' (camelCase)
     const proveedores = await db.proveedor.findMany({
       where: { disponible: true },
       select: {

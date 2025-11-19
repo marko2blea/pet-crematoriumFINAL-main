@@ -150,32 +150,28 @@ onMounted(() => {
   }
 });
 
-// --- Confirmar Pago (usa endpoint /api/pedidos) ---
+// --- Confirmar Pago (llama a /api/pedidos) ---
 const confirmarPago = async () => {
   isLoading.value = true;
   errorMessage.value = '';
 
   try {
-    const payload = {
-      userId: user.value?.id_usuario,
-      productos: cart.value.map(p => ({ id_producto: p.id, quantity: p.quantity })),
-      servicio: isServiceOrder.value ? {
-        petName: formMascota.value.petName,
-        petWeight: formMascota.value.petWeight,
-        petAge: formMascota.value.petAge,
-        direccion: formDireccion.value
-      } : null,
-      metodoEntrega: formEntrega.value.deliveryType,
+    const bodyPayload = {
+      id_usuario: user.value?.id_usuario,
+      cart: cart.value.map(item => ({
+        ...item,
+        direccion: formEntrega.value.deliveryType === 'delivery' ? formDireccion.value : undefined
+      }))
     };
 
     const response = await $fetch('/api/pedidos', {
       method: 'POST',
-      body: payload
+      body: bodyPayload
     });
 
     clearCart();
-    alert('Pago confirmado y pedido creado!');
-    router.push(response.cod_trazabilidad ? `/tracking?codigo=${response.cod_trazabilidad}` : '/');
+    alert(`Pago confirmado! Código de trazabilidad: ${response.cod_trazabilidad || 'N/A'}`);
+    router.push('/');
 
   } catch (err: any) {
     console.error(err);
@@ -188,15 +184,11 @@ const confirmarPago = async () => {
 
 <style scoped>
 .form-input { 
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  outline: none;
-}
-.form-input:focus {
-  border-color: #5C2A72;
-  box-shadow: 0 0 0 2px rgba(92, 42, 114, 0.3);
+  width: 100%; 
+  padding: 0.75rem; 
+  border: 1px solid #d1d5db; 
+  border-radius: 0.5rem; 
+  outline: none; 
 }
 .text-purple-dark { color: #4A235A; }
 .bg-purple-dark { background-color: #4A235A; }

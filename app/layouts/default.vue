@@ -5,10 +5,10 @@
       <div class="container mx-auto px-4 flex items-center justify-between text-white h-14">
         
         <div class="flex-shrink-0">
-            <NuxtLink to="/" class="flex items-center p-2 bg-white rounded-lg shadow-md ">
-                <img src="/logo.png" alt="Crematorio San Antonio Logo" class="h-10">
-                <img src="/sanantonio.png" alt="Crematorio San Antonio Logo" class="h-10">
-            </NuxtLink>
+          <NuxtLink to="/" class="flex items-center p-2 rounded-lg transition">
+          <img src="/logo.png" alt="Crematorio San Antonio Logo" class="h-10 mr-2">
+          <img src="/sanantonio.png" alt="Crematorio San Antonio Logo" class="h-10 font-bold text-purple-deep">
+         </NuxtLink>
         </div>
 
         <div class="hidden lg:flex flex-grow items-center space-x-2 justify-center px-4"> 
@@ -293,6 +293,20 @@ const isActive = (path: string, isAdminLink: boolean = false): string => {
 <style scoped>
 .main-background {
     background-color: #f4f7f6; 
+}
+
+.logo-background {
+    background: linear-gradient(135deg, #ffffff 0%, #f3e5f5 100%);
+    border: 2px solid #5C2A72; /* Morado profundo */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    padding: 4px 8px;
+    transition: all 0.3s ease;
+}
+
+.logo-background:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    transform: translateY(-2px);
 }
 
 /* (Paleta de colores sin cambios) */

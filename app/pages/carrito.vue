@@ -17,11 +17,10 @@
       <div v-else class="bg-white rounded-xl shadow-2xl overflow-hidden">
         <ul class="divide-y divide-gray-200">
           <li v-for="item in cart" :key="item.id" class="p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between">
-            
             <div class="flex items-center mb-4 sm:mb-0">
               <input type="checkbox" v-model="item.selected" 
                      @change="onToggleItem(item)"
-                     class="mr-3 w-5 h-5 text-purple-deep rounded border-gray-300 focus:ring-purple-deep" />
+                     class="mr-3 w-5 h-5 text-purple-deep rounded border-gray-300 focus:ring-2 focus:ring-purple-deep" />
               <div class="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <font-awesome-icon :icon="getIconForProduct(item.tipo)" class="text-3xl text-gray-400" />
               </div>
@@ -31,7 +30,7 @@
                 <p class="text-md font-semibold text-dark-primary-blue mt-1">${{ item.precio.toLocaleString('es-CL') }} c/u</p>
               </div>
             </div>
-            
+
             <div class="flex items-center space-x-4">
               <div class="flex items-center border border-gray-300 rounded-lg">
                 <button @click="decreaseQuantity(item.id)" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-lg">
@@ -59,10 +58,12 @@
           </div>
           <p class="text-sm text-gray-500 text-right mb-4">El IVA (19%) se calculará en el siguiente paso.</p>
           
-          <NuxtLink to="/reserva" 
-                    class="block w-full text-center bg-purple-deep text-white font-bold py-4 px-6 rounded-lg text-lg hover:bg-purple-light transition duration-300 transform hover:scale-105 shadow-lg">
-            Proceder al Pago
-          </NuxtLink>
+          <button @click="hacerCompra"
+                  :disabled="procesando"
+                  class="block w-full text-center bg-purple-deep text-white font-bold py-4 px-6 rounded-lg text-lg hover:bg-purple-light transition duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ procesando ? 'Procesando...' : 'Proceder al Pago' }}
+          </button>
+
           <button @click="clearCart" class="w-full text-center text-gray-600 hover:text-red-600 font-medium py-2 mt-3 transition duration-150">
             Vaciar Carrito
           </button>
@@ -73,12 +74,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, toRefs } from 'vue';
+import { reactive, computed, ref } from 'vue';
+import { useCart } from '~/composables/useCart';
+import { useRouter } from 'vue-router';
+import { useToaster } from '@meforma/vue-toaster';
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { 
-  faShoppingCart, faTrash, faPlus, faMinus, 
-  faHeart, faBoxOpen, faPuzzlePiece, faPaw 
-} from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faTrash, faPlus, faMinus, faHeart, faBoxOpen, faPuzzlePiece, faPaw } from '@fortawesome/free-solid-svg-icons';
 
 library.add(faShoppingCart, faTrash, faPlus, faMinus, faHeart, faBoxOpen, faPuzzlePiece, faPaw);
 
@@ -91,15 +92,16 @@ interface CartItem {
   selected: boolean;
 }
 
-// Usamos el hook original
 const rawCart = useCart();
-
-// Creamos un reactive copy para poder usar map, reduce, etc.
 const cart = reactive<CartItem[]>(rawCart.cart.value.map(i => ({ ...i, selected: true })));
 
 const cartTotal = computed(() => 
   cart.reduce((sum, item) => sum + (item.selected ? item.precio * item.quantity : 0), 0)
 );
+
+const router = useRouter();
+const toaster = useToaster();
+const procesando = ref(false);
 
 function getIconForProduct(tipo: string) {
   if (tipo === 'Servicio') return faHeart;
@@ -135,10 +137,8 @@ function clearCart() {
   rawCart.clearCart();
 }
 
-// Lógica para marcar/desmarcar
 function onToggleItem(toggledItem: CartItem) {
   if (toggledItem.tipo === 'Servicio' && toggledItem.selected) {
-    // Desmarcar otros servicios
     cart.forEach(item => {
       if (item.id !== toggledItem.id && item.tipo === 'Servicio') {
         item.selected = false;
@@ -146,6 +146,39 @@ function onToggleItem(toggledItem: CartItem) {
     });
   }
 }
+
+const hacerCompra = async () => {
+  if (!cart.length) {
+    toaster.error('El carrito está vacío');
+    return;
+  }
+
+  procesando.value = true;
+
+  try {
+    await $fetch('/api/pedidos', {
+      method: 'POST',
+      body: {
+        userId: '1234',
+        items: cart.map(item => ({
+          id: item.id,
+          cantidad: item.quantity,
+          precio: item.precio
+        })),
+        total: cartTotal.value
+      }
+    });
+
+    toaster.success('Compra realizada con éxito');
+    clearCart();
+    router.push('/gracias');
+  } catch (err: any) {
+    console.error(err);
+    toaster.error(err?.data?.message || 'Error al procesar la compra');
+  } finally {
+    procesando.value = false;
+  }
+};
 </script>
 
 <style scoped lang="postcss">

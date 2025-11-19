@@ -15,15 +15,15 @@
         <div class="p-6 md:p-8 space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="nombre" class="block text-sm font-semibold text-dark-primary-blue mb-2">Nombre del Producto</label>
+                    <label for="nombre" class="block text-sm font-semibold text-dark-primary-blue mb-2">Nombre del Ítem</label>
                     <input v-model="form.nombre" type="text" id="nombre" class="form-input" required />
                 </div>
                 
                 <div>
-                    <label for="tipo" class="block text-sm font-semibold text-dark-primary-blue mb-2">Tipo de Producto</label>
+                    <label for="tipo" class="block text-sm font-semibold text-dark-primary-blue mb-2">Tipo</label>
                     <select v-model="form.tipo" id="tipo" class="form-input bg-white">
-                        <option value="Urna">Urna</option>
                         <option value="Servicio">Servicio</option>
+                        <option value="Urna">Urna</option>
                         <option value="Accesorio">Accesorio</option>
                         <option value="Otro">Otro</option>
                     </select>
@@ -31,12 +31,13 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
+                
+                <div v-if="isPhysicalProduct">
                     <label for="stock" class="block text-sm font-semibold text-dark-primary-blue mb-2">Stock Inicial</label>
-                    <input v-model.number="form.stock" type="number" id="stock" class="form-input" required />
+                    <input v-model.number="form.stock" type="number" id="stock" class="form-input" :required="isPhysicalProduct" />
                 </div>
                 
-                <div>
+                <div :class="isPhysicalProduct ? 'md:col-span-1' : 'md:col-span-2'">
                     <label for="precio" class="block text-sm font-semibold text-dark-primary-blue mb-2">Precio Unitario (CLP)</label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -52,7 +53,6 @@
                     </select>
                 </div>
             </div>
-
             <div>
                 <label for="descripcion" class="block text-sm font-semibold text-dark-primary-blue mb-2">Descripción</label>
                 <textarea v-model="form.descripcion" id="descripcion" rows="3" class="form-input"></textarea>
@@ -63,7 +63,7 @@
                 <input v-model="form.imagen_url" type="text" id="imagen_url" class="form-input" placeholder="https://ejemplo.com/imagen.jpg" />
             </div>
 
-            <div>
+            <div v-if="isPhysicalProduct">
                 <label for="proveedor" class="block text-sm font-semibold text-dark-primary-blue mb-2">Proveedor</label>
                 <select v-model="form.id_proveedor" id="proveedor" class="form-input bg-white">
                     <option :value="null">-- Sin Proveedor --</option>
@@ -88,19 +88,19 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  middleware: 'auth'
-});
-
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-const router = useRouter();
+definePageMeta({
+  middleware: 'admin'
+});
 
 interface Proveedor {
     id_proveedor: number;
-    proveedor: string | null; // (CORREGIDO) Acepta null
+    proveedor: string | null;
 }
+
+const router = useRouter();
 
 const form = ref({
   nombre: '',
@@ -113,18 +113,28 @@ const form = ref({
   imagen_url: ''
 });
 
+// CLAVE: Determina si el tipo seleccionado requiere stock y proveedor
+const isPhysicalProduct = computed(() => form.value.tipo !== 'Servicio');
+
 const isSaving = ref(false);
 const saveMessage = ref('');
 const saveError = ref(false);
 
-// (CORREGIDO) Carga real de proveedores
-const { data: proveedores, pending: pendingProveedores } = await useAsyncData('lista-proveedores', 
-  () => $fetch<Proveedor[]>('/api/admin/proveedores')
+// Carga real de proveedores (API)
+const { data: proveedores, pending: pendingProveedores } = await useAsyncData<Proveedor[]>('lista-proveedores', 
+  () => $fetch('/api/admin/proveedores')
 );
 
 const guardarCambios = async () => {
   if (!form.value) return;
 
+  // Lógica de Limpieza Final: Si es servicio, forzamos stock y proveedor a null/cero
+  const dataToSend = { ...form.value };
+  if (!isPhysicalProduct.value) {
+      dataToSend.stock = 0;
+      dataToSend.id_proveedor = null;
+  }
+  
   isSaving.value = true;
   saveMessage.value = '';
   saveError.value = false;
@@ -132,7 +142,7 @@ const guardarCambios = async () => {
   try {
     await $fetch('/api/admin/agregar-producto', {
       method: 'POST',
-      body: form.value
+      body: dataToSend // Enviamos los datos limpios
     });
 
     saveMessage.value = '¡Producto creado con éxito! Redirigiendo...';
@@ -149,7 +159,14 @@ const guardarCambios = async () => {
 </script>
 
 <style scoped lang="postcss">
-/* (Estilos sin cambios) */
+.form-input {
+  /* FIX: Usando un color estandar y borde/ring consistente (focus:ring-purple-600) */
+  @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600;
+}
+.form-input.pl-7 {
+  padding-left: 1.75rem;
+}
+
 .text-purple-dark { color: #4A235A; }
 .bg-purple-dark { background-color: #4A235A; } 
 .text-purple-deep { color: #5C2A72; } 
@@ -164,10 +181,4 @@ const guardarCambios = async () => {
 .bg-red-100 { background-color: #f8d7da; }
 .text-red-700 { color: #721c24; }
 .border-red-300 { border-color: #f5c6cb; }
-.form-input {
-  @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-deep focus:border-purple-deep;
-}
-.form-input.pl-7 {
-  padding-left: 1.75rem;
-}
 </style>

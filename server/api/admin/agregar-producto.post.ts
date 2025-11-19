@@ -1,5 +1,6 @@
 // server/api/admin/agregar-producto.post.ts
 import { db } from '../../utils/prisma';
+import { Prisma } from '@prisma/client';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,8 +12,8 @@ export default defineEventHandler(async (event) => {
       disponible,
       tipo,
       id_proveedor,
-      descripcion, // (NUEVO)
-      imagen_url   // (NUEVO)
+      descripcion,
+      imagen_url
     } = body;
 
     if (!nombre || !tipo) {
@@ -22,17 +23,17 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // (MODIFICADO) Usa PascalCase: db.producto
+    // FIX: Usamos tx.producto y convertimos precio/stock a Decimal/Int
     const nuevoProducto = await db.producto.create({
       data: {
         nombre_producto: nombre,
         stock_actual: Number(stock) || 0,
-        precio_unitario: Number(precio) || 0,
+        precio_unitario: new Prisma.Decimal(Number(precio) || 0), // Convertir a Decimal
         disponible: disponible,
         tipo_producto: tipo,
         id_proveedor: id_proveedor ? Number(id_proveedor) : null,
-        descripcion: descripcion, // (NUEVO)
-        imagen_url: imagen_url,   // (NUEVO)
+        descripcion: descripcion, 
+        imagen_url: imagen_url,
       },
     });
 
