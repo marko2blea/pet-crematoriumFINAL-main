@@ -16,7 +16,6 @@ export default defineEventHandler(async (event) => {
                 pedido: { 
                     include: {
                         usuario: true, 
-                        // INCLUIR PRODUCTOS COMPRADOS
                         detalles_pedido: { 
                             include: { producto: true } 
                         },
@@ -33,7 +32,7 @@ export default defineEventHandler(async (event) => {
         // --- 1. Obtener Datos de la Mascota ---
         let mascotaData = null;
         if (reservaDetalle.pedido.usuario.id_usuario) {
-            // Buscamos la mascota más reciente asociada al usuario (la que se creó con el servicio)
+            // Buscamos la mascota más reciente asociada al usuario
             const mascotas = await db.mascota.findMany({
                 where: { id_usuario: reservaDetalle.pedido.usuario.id_usuario },
                 orderBy: { id_mascota: 'desc' },
@@ -42,7 +41,7 @@ export default defineEventHandler(async (event) => {
             if (mascotas.length > 0) {
                 mascotaData = {
                     nombre: mascotas[0].nombre_mascota,
-                    peso: mascotas[0].peso?.toNumber() || 0, // Convertir Decimal a number
+                    peso: mascotas[0].peso?.toNumber() || 0,
                     edad: mascotas[0].edad,
                 };
             }
@@ -52,7 +51,7 @@ export default defineEventHandler(async (event) => {
         const productosComprados = reservaDetalle.pedido.detalles_pedido.map(detalle => ({
             nombre: detalle.producto?.nombre_producto || 'Ítem Desconocido',
             cantidad: detalle.cantidad,
-            precio: detalle.precio_unitario.toNumber(), // Convertir Decimal a number
+            precio: detalle.precio_unitario.toNumber(),
         }));
 
         // --- 3. Formatear la Respuesta ---
@@ -72,7 +71,6 @@ export default defineEventHandler(async (event) => {
             nombre_cliente: reservaDetalle.pedido.usuario.nombre || 'Desconocido',
             correo_cliente: reservaDetalle.pedido.usuario.correo || 'N/A',
             
-            // Nombre del Servicio
             nombre_servicio: reservaDetalle.detalle_reserva?.nombre_servicio || 'N/A',
             tipo_servicio: reservaDetalle.detalle_reserva?.tipo_servicio || 'N/A',
             
@@ -80,7 +78,6 @@ export default defineEventHandler(async (event) => {
             comuna: reservaDetalle.comuna,
             direccion: reservaDetalle.direccion,
 
-            // NUEVOS DATOS
             mascota_datos: mascotaData,
             productos_comprados: productosComprados,
         };

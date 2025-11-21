@@ -1,4 +1,3 @@
-// server/api/admin/editar-reserva.put.ts
 import { db } from '../../utils/prisma';
 import { createError } from 'h3';
 
@@ -23,6 +22,7 @@ export default defineEventHandler(async (event) => {
         let fechaCompleta: Date | null = null;
         
         if (fecha_reservada && hora_reservada) {
+            // Combinar fecha (YYYY-MM-DD) y hora (HH:MM) para crear un objeto Date (UTC)
             const dateTimeString = `${fecha_reservada}T${hora_reservada}:00.000Z`;
             fechaCompleta = new Date(dateTimeString);
 

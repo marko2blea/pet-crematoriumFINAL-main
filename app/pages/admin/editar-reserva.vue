@@ -165,7 +165,7 @@ const fetchReservaData = async (id: number) => {
             query: { id_reserva: id },
         }) as ReservaDetalle;
 
-        // Asegurar que mascota_datos y productos_comprados no sean null/undefined
+        // Asegurar la inicialización de datos para el template
         if (!response.mascota_datos) {
             response.mascota_datos = { nombre: 'N/A', peso: 0, edad: 0 };
         }
@@ -191,6 +191,12 @@ const handleSubmit = async () => {
     saving.value = true;
     error.value = null;
 
+    if (!idReserva.value) {
+        error.value = "Error: ID de reserva no válido para guardar.";
+        saving.value = false;
+        return;
+    }
+
     try {
         const payload = {
             id_reserva: idReserva.value,
@@ -199,7 +205,8 @@ const handleSubmit = async () => {
             hora_reservada: reservaForm.value.hora_reservada,
         };
 
-        const response = await $fetch(`/api/admin/editar-reserva.put`, {
+        // FIX CRÍTICO: Se llama a la URL base sin el .put para que Nuxt resuelva el método PUT
+        const response = await $fetch(`/api/admin/editar-reserva`, {
             method: 'PUT',
             body: payload,
         });
@@ -208,7 +215,12 @@ const handleSubmit = async () => {
         
     } catch (e: any) {
         console.error('Error al guardar:', e);
-        error.value = e.data?.statusMessage || 'Fallo al guardar. Revisa la consola para más detalles.';
+        // Si el error es 404, indicamos al usuario que reinicie el servidor.
+        if (e.statusCode === 404) {
+            error.value = 'ERROR 404: La ruta de guardado no fue encontrada. Por favor, reinicie su servidor de desarrollo (npm run dev) para registrar la nueva API.';
+        } else {
+             error.value = e.data?.statusMessage || 'Fallo al guardar. Revisa la consola para más detalles.';
+        }
     } finally {
         saving.value = false;
     }
