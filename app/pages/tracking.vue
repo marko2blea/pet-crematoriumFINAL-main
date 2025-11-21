@@ -1,193 +1,156 @@
 <template>
-  <div class="pt-14 py-20 min-h-screen container mx-auto px-4">
-    
-    <div class="max-w-2xl mx-auto">
-      <!-- Encabezado -->
-      <div class="text-center mb-10">
-        <h1 class="text-4xl font-extrabold text-purple-dark mb-3">Seguimiento de Servicio</h1>
-        <p class="text-lg text-gray-600">Ingrese su código de trazabilidad para ver el estado de su reserva.</p>
-      </div>
+	<div class="pt-14 py-20 min-h-screen container mx-auto px-4">
+		<div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-2xl">
+			<h1 class="text-3xl font-bold mb-8 text-center text-purple-deep">
+				<font-awesome-icon icon="fas fa-search-location" class="mr-2" />
+				Seguimiento de Pedido / Reserva
+			</h1>
 
-      <!-- Formulario de Búsqueda -->
-      <form @submit.prevent="buscarTracking" class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-dark mb-8">
-        <div class="flex flex-col sm:flex-row gap-4">
-          <div class="relative flex-grow">
-            <input 
-              v-model="codigoBusqueda"
-              type="text" 
-              placeholder="Ej: ABC-12345"
-              class="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-deep focus:ring-1 focus:ring-purple-deep focus:outline-none transition duration-150 shadow-inner"
-              required
-            />
-            <font-awesome-icon icon="fas fa-barcode" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
-          </div>
-          <button 
-            type="submit"
-            :disabled="isLoading"
-            class="py-4 px-6 bg-purple-deep text-white rounded-xl font-bold hover:bg-purple-light transition duration-150 shadow-lg flex items-center justify-center
-                   disabled:opacity-50 disabled:cursor-not-allowed">
-            <font-awesome-icon v-if="isLoading" icon="fas fa-spinner" class="animate-spin mr-2" />
-            <font-awesome-icon v-else icon="fas fa-search" class="mr-2" />
-            <span>{{ isLoading ? 'Buscando...' : 'Buscar' }}</span>
-          </button>
-        </div>
-      </form>
+			<form @submit.prevent="handleSearch" class="flex flex-col gap-4 mb-8">
+				<input type="text"
+					v-model="inputCode"
+					placeholder="Ingresa tu código de seguimiento"
+					required
+					class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-purple-light focus:border-purple-light transition duration-150"
+				/>
+				<button type="submit"
+					:disabled="loading || !inputCode"
+					class="w-full bg-purple-deep text-white font-bold py-3 rounded-lg text-lg hover:bg-purple-light transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+					{{ loading ? 'Buscando...' : 'Buscar Pedido' }}
+				</button>
+			</form>
 
-      <!-- Resultados -->
-      <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-bd-gold-accent">
-          
-          <!-- Estado de Carga -->
-          <div v-if="isLoading" class="text-center py-6">
-              <p class="text-lg text-gray-600">Buscando información...</p>
-          </div>
-          
-          <!-- Estado de Error -->
-          <div v-else-if="errorMessage" class="text-center py-6">
-              <font-awesome-icon icon="fas fa-exclamation-triangle" class="text-red-500 text-4xl mb-4" />
-              <h3 class="text-xl font-bold text-red-700">Error en la Búsqueda</h3>
-              <p class="text-gray-600 mt-2">{{ errorMessage }}</p>
-          </div>
+			<div v-if="loading" class="text-center text-purple-deep">
+				<font-awesome-icon icon="fas fa-spinner" spin class="text-2xl" />
+				<p class="mt-2">Cargando estado...</p>
+			</div>
+			
+			<div v-else-if="error" class="text-center bg-red-100 text-red-700 p-4 rounded-lg border border-red-300">
+				<font-awesome-icon icon="fas fa-exclamation-triangle" class="mr-2" />
+				<p class="font-semibold">{{ error }}</p>
+			</div>
 
-          <!-- Estado de Éxito -->
-          <div v-else-if="resultado" class="space-y-4">
-              <h2 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">Resultados del Seguimiento</h2>
-              <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-lg">
-                  <span class="font-semibold text-gray-600">Código:</span>
-                  <span class="font-bold text-dark-primary-blue">{{ resultado.codigo }}</span>
-                  
-                  <span class="font-semibold text-gray-600">Mascota:</span>
-                  <span class="font-bold text-dark-primary-blue">{{ resultado.mascota }}</span>
-                  
-                  <span class="font-semibold text-gray-600">Fecha de Reserva:</span>
-                  <span class="font-bold text-dark-primary-blue">{{ resultado.fecha }}</span>
-                  
-                  <span class="font-semibold text-gray-600">Estado:</span>
-                  <span class="px-3 py-1 text-base font-bold rounded-full inline-block" 
-                        :class="getStatusClass(resultado.estado)">
-                      {{ resultado.estado }}
-                  </span>
-              </div>
-          </div>
+			<div v-else-if="trackingData" class="border border-gray-200 p-6 rounded-lg space-y-4">
+				<h2 class="text-xl font-bold text-gray-800 border-b pb-2 mb-3">Detalles de Seguimiento</h2>
 
-          <!-- Estado Inicial -->
-          <div v-else class="text-center py-6">
-              <p class="text-gray-500">Ingrese un código para ver el estado de su servicio.</p>
-          </div>
-      </div>
+				<div class="flex justify-between items-center">
+					<span class="font-medium text-gray-600">Código:</span>
+					<span class="font-bold text-dark-primary-blue">{{ trackingData.codigo }}</span>
+				</div>
 
-    </div>
-  </div>
+				<div class="flex justify-between items-center">
+					<span class="font-medium text-gray-600">Artículo:</span>
+					<span class="font-bold text-gray-800">{{ trackingData.item }}</span>
+				</div>
+
+				<div class="flex justify-between items-center">
+					<span class="font-medium text-gray-600">Estado Actual:</span>
+					<span :class="['px-3 py-1 rounded-full font-semibold text-sm', getStatusColor(trackingData.estado)]">
+						{{ trackingData.estado }}
+					</span>
+				</div>
+
+				<div v-if="trackingData.fecha && trackingData.fecha !== 'N/A'" class="flex justify-between items-center">
+					<span class="font-medium text-gray-600">Fecha/Hora Asignada:</span>
+					<span class="font-bold text-gray-800">{{ trackingData.fecha }}</span>
+				</div>
+                
+				<div class="flex justify-between items-center pt-3 border-t mt-3">
+					<span class="text-xl font-bold text-dark-primary-blue">Precio Total:</span>
+					<span class="text-2xl font-extrabold text-purple-dark">${{ trackingData.precioTotal.toLocaleString('es-CL') }}</span>
+				</div>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router'; // (NUEVO) Para leer la URL
+import { useRoute } from 'vue-router';
+// Importamos los iconos necesarios para el diseño
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { faSearch, faBarcode, faSpinner, faExclamationTriangle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faSearchLocation, faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+library.add(faSearchLocation, faSpinner, faExclamationTriangle);
 
-library.add(faSearch, faBarcode, faSpinner, faExclamationTriangle, faCheckCircle);
 
-definePageMeta({
-  title: 'Seguimiento'
-});
+// Interfaz que coincide con la respuesta de server/api/tracking.get.ts
+interface TrackingData {
+  codigo: string;
+  item: string;
+  fecha: string; 
+  estado: string; 
+  precioTotal: number; // Nuevo
+}
 
-const route = useRoute(); // (NUEVO)
+const route = useRoute();
+const inputCode = ref<string>(''); // Código ingresado en el input
+const trackingData = ref<TrackingData | null>(null);
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
 
-// --- Estado ---
-const codigoBusqueda = ref('');
-const isLoading = ref(false);
-const errorMessage = ref('');
-
-// (NUEVO) Tipo para la respuesta de la API
-type TrackingResult = {
-  codigo: string | null;
-  mascota: string;
-  fecha: string;
-  estado: 'Pendiente' | 'En Proceso' | 'Finalizado' | 'Cancelado';
+// Mapeo de estados a clases CSS (La lógica principal se hace en la API para centralizar)
+const getStatusColor = (estado: string): string => {
+    estado = estado.toLowerCase();
+    if (estado.includes('finalizad') || estado.includes('entregado')) return 'text-green-600 bg-green-100';
+    if (estado.includes('asignad') || estado.includes('confirmad') || estado.includes('tránsito')) return 'text-blue-600 bg-blue-100';
+    if (estado.includes('proceso') || estado.includes('esperando') || estado.includes('preparando')) return 'text-yellow-700 bg-yellow-200';
+    if (estado.includes('pendiente')) return 'text-red-500 bg-red-100';
+    if (estado.includes('cancelad')) return 'text-red-600 bg-red-100';
+    return 'text-gray-600 bg-gray-100';
 };
-const resultado = ref<TrackingResult | null>(null);
 
 
-// --- (NUEVO) Cargar desde URL ---
-// Esto se ejecuta cuando la página carga
-onMounted(() => {
-  // 1. Leer el '?codigo=' de la URL
-  const codigoUrl = route.query.codigo as string | undefined;
-
-  if (codigoUrl) {
-    // 2. Si existe, ponerlo en el formulario
-    codigoBusqueda.value = codigoUrl;
-    // 3. Y ejecutar la búsqueda automáticamente
-    buscarTracking();
-  }
-});
-
-
-// --- Funciones ---
-const buscarTracking = async () => {
-  isLoading.value = true;
-  errorMessage.value = '';
-  resultado.value = null;
-
-  if (!codigoBusqueda.value) {
-    errorMessage.value = 'Por favor, ingrese un código.';
-    isLoading.value = false;
-    return;
-  }
+const fetchTrackingData = async (code: string) => {
+  loading.value = true;
+  error.value = null;
+  trackingData.value = null;
 
   try {
-    // 4. Llamar a la API de tracking (la que ya existe)
-    const data = await $fetch<TrackingResult>('/api/tracking', {
-      params: { codigo: codigoBusqueda.value }
+    const response = await $fetch<TrackingData>(`/api/tracking`, {
+      method: 'GET',
+      query: { codigo: code },
     });
-    resultado.value = data;
+    
+    trackingData.value = response;
 
-  } catch (error: any) {
-    console.error('Error en tracking:', error);
-    errorMessage.value = error.data?.statusMessage || 'Error al buscar el código.';
+  } catch (err: any) {
+    error.value = err.data?.statusMessage || 'No se pudo obtener la información de seguimiento.';
   } finally {
-    isLoading.value = false;
+    loading.value = false;
   }
 };
 
-const getStatusClass = (status: TrackingResult['estado']) => {
-    switch (status) {
-        case 'Pendiente':
-            return 'bg-yellow-100 text-yellow-800';
-        case 'En Proceso':
-            return 'bg-blue-100 text-blue-800';
-        case 'Finalizado':
-            return 'bg-green-100 text-green-800';
-        case 'Cancelado':
-            return 'bg-red-100 text-red-800';
+const handleSearch = () => {
+    if (inputCode.value) {
+        fetchTrackingData(inputCode.value);
     }
 };
+
+
+onMounted(() => {
+  // Si el código viene de la redirección del checkout, lo buscamos inmediatamente
+  const code = route.query.codigo as string;
+  if (code) {
+    inputCode.value = code;
+    fetchTrackingData(code);
+  }
+});
 </script>
 
-<style scoped>
-/* Estilos (Copiados de checkout/reserva) */
+<style scoped lang="postcss">
 .text-purple-dark { color: #4A235A; }
-.bg-purple-dark { background-color: #4A235A; } 
+.bg-purple-dark { background-color: #4A235A; }
 .bg-purple-light { background-color: #6C3483; }
-.bg-purple-deep { background-color: #5C2A72; } 
-.text-purple-deep { color: #5C2A72; } 
+.text-purple-deep { color: #5C2A72; }
+.bg-purple-deep { background-color: #5C2A72; }
+.hover\:bg-purple-light:hover { background-color: #6C3483; }
 .text-dark-primary-blue { color: #34495e; }
-.border-bd-gold-accent { border-color: #FFD700; }
-.focus\:border-purple-deep:focus { border-color: #5C2A72; }
-.focus\:ring-purple-deep:focus { --tw-ring-color: #5C2A72; }
-.disabled\:opacity-50:disabled { opacity: 0.5; }
-.disabled\:cursor-not-allowed:disabled { cursor: not-allowed; }
 
-/* Colores de Badges (Copiados de admin/reservas) */
-.bg-yellow-100 { background-color: #fff3cd; }
-.text-yellow-800 { color: #856404; }
-.bg-blue-100 { background-color: #d1ecf1; }
-.text-blue-800 { color: #0c5460; }
-.bg-green-100 { background-color: #d4edda; }
-.text-green-800 { color: #155724; }
-.bg-red-100 { background-color: #f8d7da; }
-.text-red-800 { color: #721c24; }
-.text-red-500 { color: #dc3545; }
-.text-red-700 { color: #b91c1c; }
-.bg-red-50 { background-color: #fef2f2; }
+/* Asegura que el foco del input sea consistente */
+.focus\:ring-purple-light:focus {
+    --tw-ring-color: #6C3483;
+}
+.focus\:border-purple-light:focus {
+    border-color: #6C3483;
+}
 </style>

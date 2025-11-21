@@ -8,6 +8,8 @@ export default defineEventHandler(async (event) => {
 
     if (!idPedido) throw createError({ statusCode: 400, statusMessage: 'Falta ID de pedido.' });
 
+    let trackingCode: string = String(idPedido);
+
     // Buscar pedido y relación
     const pedido = await db.pedido.findUnique({
       where: { id_pedido: Number(idPedido) },
@@ -34,22 +36,29 @@ export default defineEventHandler(async (event) => {
 
       // 3. Actualizar reserva si existe
       if (pedido.reserva) {
+        const newTrackingCode = pedido.reserva.cod_trazabilidad || nanoid(8).toUpperCase();
+        
         await tx.reserva.update({
           where: { id_reserva: pedido.reserva.id_reserva },
           data: {
             estado_reserva: pagoExitoso ? 'Confirmada' : pedido.reserva.estado_reserva,
-            cod_trazabilidad: pedido.reserva.cod_trazabilidad || nanoid(8).toUpperCase(),
+            cod_trazabilidad: newTrackingCode,
           },
         });
+        trackingCode = newTrackingCode;
       }
     });
 
     return {
       statusCode: 200,
       message: 'Checkout completado correctamente.',
+      codTrazabilidad: trackingCode,
     };
   } catch (error: any) {
     console.error('Error en checkout:', error);
-    throw createError({ statusCode: 500, statusMessage: 'Error al procesar el checkout.' });
+    throw createError({ 
+        statusCode: (error as { statusCode?: number }).statusCode || 500, 
+        statusMessage: (error as { statusMessage?: string }).statusMessage || 'Error al procesar el checkout.' 
+    });
   }
 });

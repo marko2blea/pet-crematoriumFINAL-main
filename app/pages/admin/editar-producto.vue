@@ -1,9 +1,23 @@
 <template>
   <div class="pt-14 py-20 min-h-screen container mx-auto px-4">
-    <form @submit.prevent="guardarCambios" class="max-w-3xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border-t-8 border-purple-dark">
+
+    <div v-if="pending" class="text-center p-10 bg-white rounded-xl shadow-lg">
+      <h1 class="text-3xl font-bold text-dark-primary-blue">Cargando datos...</h1>
+    </div>
+
+    <div v-else-if="error || !form" class="text-center p-10 bg-red-50 rounded-xl shadow-lg border border-red-300">
+      <h1 class="text-3xl font-bold text-red-700">Error al Cargar el Producto</h1>
+      <p class="text-gray-600 mt-2">{{ error?.statusMessage || 'El producto no pudo ser encontrado.' }}</p>
+      <button @click="router.push('/admin/inventario')"
+        class="mt-6 px-5 py-2 bg-purple-dark text-white rounded-lg hover:bg-purple-deep transition shadow-lg">
+        Volver al Inventario
+      </button>
+    </div>
+    
+    <form v-else @submit.prevent="guardarCambios" class="max-w-3xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border-t-8 border-purple-dark">
         <div class="p-6 bg-gray-50 border-b border-gray-200">
-            <h1 class="text-3xl font-bold text-purple-dark">Agregar Nuevo Producto</h1>
-            <p class="text-lg text-gray-600 mt-1">Complete los detalles del nuevo ítem de inventario.</p>
+            <h1 class="text-3xl font-bold text-purple-dark">Editar Producto</h1>
+            <p class="text-lg text-gray-600 mt-1">{{ form.nombre }} (ID: {{ form.id }})</p>
         </div>
 
         <div v-if="saveMessage" 
@@ -21,7 +35,7 @@
                 
                 <div>
                     <label for="tipo" class="block text-sm font-semibold text-dark-primary-blue mb-2">Tipo de Producto</label>
-                    <select v-model="form.tipo" id="tipo" class="form-input bg-white">
+                    <select v-model="form.tipo" id="tipo" class="form-input bg-white" :disabled="true" title="El tipo de producto no se puede editar.">
                         <option value="Urna">Urna</option>
                         <option value="Servicio">Servicio</option>
                         <option value="Accesorio">Accesorio</option>
@@ -31,9 +45,10 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label for="stock" class="block text-sm font-semibold text-dark-primary-blue mb-2">Stock Inicial</label>
-                    <input v-model.number="form.stock" type="number" id="stock" class="form-input" required />
+                
+                <div v-if="isPhysicalProduct">
+                    <label for="stock" class="block text-sm font-semibold text-dark-primary-blue mb-2">Stock Actual</label>
+                    <input v-model.number="form.stock" type="number" id="stock" class="form-input" :required="isPhysicalProduct" />
                 </div>
                 
                 <div>
@@ -63,7 +78,7 @@
                 <input v-model="form.imagen_url" type="text" id="imagen_url" class="form-input" placeholder="https://ejemplo.com/imagen.jpg" />
             </div>
 
-            <div>
+            <div v-if="isPhysicalProduct">
                 <label for="proveedor" class="block text-sm font-semibold text-dark-primary-blue mb-2">Proveedor</label>
                 <select v-model="form.id_proveedor" id="proveedor" class="form-input bg-white">
                     <option :value="null">-- Sin Proveedor --</option>
@@ -80,7 +95,7 @@
                 Cancelar
             </button>
             <button type="submit" :disabled="isSaving" class="px-5 py-2 bg-purple-deep text-white rounded-lg hover:bg-purple-light transition duration-150 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                {{ isSaving ? 'Creando...' : 'Crear Producto' }}
+                {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
         </div>
     </form>
@@ -88,58 +103,86 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { faPlus } from '@fortawesome/free-solid-svg-icons'; 
-
-library.add(faPlus);
+import { ref, computed, watchEffect } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 definePageMeta({
   middleware: 'admin'
 });
 
+const route = useRoute();
+const router = useRouter();
+const productoId = ref(route.query.id as string);
+
+interface ProductoForm {
+  id: number;
+  nombre: string;
+  stock: number;
+  precio: number;
+  disponible: boolean;
+  tipo: string;
+  id_proveedor: number | null;
+  descripcion: string;
+  imagen_url: string;
+}
 interface Proveedor {
     id_proveedor: number;
     proveedor: string | null;
 }
 
-const router = useRouter();
-
-const form = ref({
-  nombre: '',
-  stock: 0,
-  precio: 0,
-  disponible: true,
-  tipo: 'Urna',
-  id_proveedor: null as number | null,
-  descripcion: '',
-  imagen_url: ''
-});
-
+const form = ref<ProductoForm | null>(null);
 const isSaving = ref(false);
 const saveMessage = ref('');
 const saveError = ref(false);
 
-// Carga real de proveedores (API)
+// CLAVE: Determina si el tipo cargado es un producto físico
+const isPhysicalProduct = computed(() => form.value?.tipo !== 'Servicio');
+
+
+// Cargar el producto (API)
+const { data: loadedData, pending, error } = await useAsyncData<ProductoForm>(
+  'producto-detalle-admin',
+  () => {
+    if (!productoId.value) throw createError({ statusCode: 400, statusMessage: 'Falta ID de producto' });
+    return $fetch('/api/admin/producto-detalle', { query: { id: productoId.value } })
+  },
+  { watch: [productoId] }
+);
+
+// Cargar la lista de proveedores (API)
 const { data: proveedores, pending: pendingProveedores } = await useAsyncData<Proveedor[]>('lista-proveedores', 
   () => $fetch('/api/admin/proveedores')
 );
 
+watchEffect(() => {
+  if (loadedData.value) {
+    form.value = { ...loadedData.value };
+  }
+});
+
+// Guardar Cambios
 const guardarCambios = async () => {
   if (!form.value) return;
 
+  const dataToSend = { ...form.value };
+  
+  // Lógica de Limpieza: Si es servicio, forzamos stock y proveedor a null/cero en el backend
+  if (!isPhysicalProduct.value) {
+      dataToSend.stock = 0;
+      dataToSend.id_proveedor = null;
+  }
+  
   isSaving.value = true;
   saveMessage.value = '';
   saveError.value = false;
 
   try {
-    await $fetch('/api/admin/agregar-producto', {
-      method: 'POST',
-      body: form.value
+    await $fetch('/api/admin/editar-producto', {
+      method: 'PUT',
+      body: dataToSend
     });
 
-    saveMessage.value = '¡Producto creado con éxito! Redirigiendo...';
+    saveMessage.value = '¡Producto actualizado con éxito! Redirigiendo...';
     setTimeout(() => {
       router.push('/admin/inventario');
     }, 2000);
@@ -147,7 +190,7 @@ const guardarCambios = async () => {
   } catch (err: any) {
     isSaving.value = false;
     saveError.value = true;
-    saveMessage.value = err.data?.statusMessage || 'Error al crear el producto.';
+    saveMessage.value = err.data?.statusMessage || 'Error al guardar el producto.';
   }
 };
 </script>

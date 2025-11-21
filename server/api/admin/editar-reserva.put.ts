@@ -1,104 +1,68 @@
-// server/api/admin/editar-reserva.put.ts
 import { db } from '../../utils/prisma';
-import type { Prisma } from '@prisma/client';
+import { createError } from 'h3';
 
-type ReservaSelected = {
-  id_reserva: number;
-  cod_trazabilidad: string;
-};
+// Interfaz para el cuerpo de la solicitud PUT (debe coincidir con reservaForm.value)
+interface ReservaUpdateBody {
+    id_reserva: number;
+    estado_reserva: string;
+    fecha_reservada: string | null; // YYYY-MM-DD
+    hora_reservada: string | null; // HH:MM
+}
 
 export default defineEventHandler(async (event) => {
-  try {
-    const body = await readBody<{
-      id_reserva?: number;
-      estado_reserva?: string;
-      cod_trazabilidad?: string | null;
-      fecha_reservada?: string | null;
-      hora_reservada?: string | null;
-      region?: string;
-      comuna?: string;
-      direccion?: string;
-      precio_total?: number;
-      id_pedido?: number;
-    }>(event);
+    try {
+        const body = await readBody<ReservaUpdateBody>(event);
+        const { id_reserva, estado_reserva, fecha_reservada, hora_reservada } = body;
 
-    if (!body) throw createError({ statusCode: 400, statusMessage: 'Faltan datos en el request.' });
+        if (!id_reserva) {
+            throw createError({ statusCode: 400, statusMessage: 'ID de reserva faltante.' });
+        }
 
-    let reserva: ReservaSelected | null = null;
+        // 1. Lógica de Estado Condicional: 
+        // Si hay fecha y hora válidas, el estado DEBE ser Confirmada (o En Proceso/Finalizada si el admin lo eligió)
+        // Si no hay fecha, el estado DEBE ser Pendiente (a menos que se quiera Cancelar).
+        
+        let newEstado = estado_reserva;
+        let fechaCompleta: Date | null = null;
+        
+        if (fecha_reservada && hora_reservada) {
+            // Combinar fecha (YYYY-MM-DD) y hora (HH:MM) para crear un objeto Date
+            const dateTimeString = `${fecha_reservada}T${hora_reservada}:00.000Z`;
+            fechaCompleta = new Date(dateTimeString);
 
-    await db.$transaction(async (tx) => {
-      if (body.id_reserva) {
-        const updated = await tx.reserva.update({
-          where: { id_reserva: body.id_reserva },
-          data: {
-            estado_reserva: body.estado_reserva || 'Pendiente',
-            cod_trazabilidad: body.cod_trazabilidad || generateTrackingCode(),
-            fecha_reservada: body.fecha_reservada ? new Date(body.fecha_reservada) : undefined,
-            hora_reservada: body.hora_reservada ? new Date(body.hora_reservada) : undefined,
-            region: body.region,
-            comuna: body.comuna,
-            direccion: body.direccion,
-            precio_total: body.precio_total ?? 0,
-          },
-          select: { id_reserva: true, cod_trazabilidad: true },
+            // Si se asignó fecha, asegurar que el estado no sea 'Pendiente'
+            if (newEstado === 'Pendiente') {
+                 newEstado = 'Confirmada';
+            }
+        } else {
+            // Si el admin borra la fecha, forzamos el estado a Pendiente (a menos que haya sido Cancelada previamente)
+            if (newEstado !== 'Cancelada' && newEstado !== 'En Proceso' && newEstado !== 'Finalizada') {
+                newEstado = 'Pendiente';
+            }
+        }
+
+        const updatedReserva = await db.reserva.update({
+            where: { id_reserva: id_reserva },
+            data: {
+                estado_reserva: newEstado,
+                // Guardar la fecha completa (fecha y hora en la base de datos)
+                fecha_reservada: fechaCompleta, 
+                // La columna 'hora_reservada' en la DB no es necesaria si 'fecha_reservada' es DateTime
+                // Si 'hora_reservada' existe en tu DB como columna separada, ajusta aquí.
+            },
         });
 
-        reserva = {
-          id_reserva: updated.id_reserva,
-          cod_trazabilidad: updated.cod_trazabilidad ?? generateTrackingCode(),
+        return {
+            statusCode: 200,
+            message: `Reserva #${id_reserva} actualizada a estado: ${newEstado}.`,
+            reserva: updatedReserva,
         };
-      } else {
-        if (!body.id_pedido) throw createError({ statusCode: 400, statusMessage: 'id_pedido es obligatorio para crear reserva.' });
-        if (body.precio_total === undefined) throw createError({ statusCode: 400, statusMessage: 'precio_total es obligatorio para crear reserva.' });
 
-        const created = await tx.reserva.create({
-          data: {
-            estado_reserva: body.estado_reserva || 'Pendiente',
-            cod_trazabilidad: generateTrackingCode(),
-            fecha_reservada: body.fecha_reservada ? new Date(body.fecha_reservada) : undefined,
-            hora_reservada: body.hora_reservada ? new Date(body.hora_reservada) : undefined,
-            region: body.region,
-            comuna: body.comuna,
-            direccion: body.direccion,
-            precio_total: body.precio_total,
-            id_pedido: body.id_pedido,
-          },
-          select: { id_reserva: true, cod_trazabilidad: true },
+    } catch (error: any) {
+        console.error('Error al editar reserva:', error);
+        throw createError({
+            statusCode: 500,
+            statusMessage: `Error al guardar los cambios: ${error.message || 'Error interno.'}`,
         });
-
-        reserva = {
-          id_reserva: created.id_reserva,
-          cod_trazabilidad: created.cod_trazabilidad ?? generateTrackingCode(),
-        };
-      }
-    });
-
-    // --- Type guard: aseguramos que reserva nunca es null ---
-    if (!reserva) throw createError({ statusCode: 500, statusMessage: 'No se pudo crear o actualizar la reserva.' });
-
-    // ✅ Hacemos un cast seguro
-    const finalReserva = reserva as ReservaSelected;
-
-    return {
-      statusCode: 200,
-      message: 'Reserva procesada correctamente',
-      cod_trazabilidad: finalReserva.cod_trazabilidad,
-      id_reserva: finalReserva.id_reserva,
-    };
-  } catch (error) {
-    console.error('Error en editar-reserva:', error);
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Error al procesar la reserva',
-    });
-  }
+    }
 });
-
-function generateTrackingCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 9; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}

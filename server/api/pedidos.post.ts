@@ -1,17 +1,22 @@
 import { db } from '../utils/prisma';
 
+// Definiciones de tipos necesarias para este endpoint
+interface Direccion { 
+  region: string; 
+  comuna: string; 
+  direccion: string; 
+}
 interface CartItem {
   id: number;
   nombre: string;
   precio: number;
   quantity: number;
-  tipo: 'Producto' | 'Servicio';
+  tipo: 'Producto' | 'Servicio' | 'Urna' | 'Accesorio'; 
   petName?: string;
   petWeight?: number;
   petAge?: number;
-  direccion?: { region: string; comuna: string; direccion: string };
+  direccion?: Direccion;
 }
-
 interface PedidoBody {
   id_usuario: number;
   cart: CartItem[];
@@ -20,15 +25,31 @@ interface PedidoBody {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<PedidoBody>(event);
-    if (!body || !body.cart || body.cart.length === 0) {
-      throw createError({ statusCode: 400, statusMessage: 'Carrito vacío o datos faltantes' });
+    if (!body || !body.cart || body.cart.length === 0 || !body.id_usuario) {
+      throw createError({ statusCode: 400, statusMessage: 'Datos faltantes (id_usuario o carrito vacío).' });
     }
 
     const { id_usuario, cart } = body;
-    const producto = cart.find(i => i.tipo === 'Producto');
+    const itemsProductos = cart.filter(i => i.tipo !== 'Servicio');
     const servicio = cart.find(i => i.tipo === 'Servicio');
 
     const totalGeneral = cart.reduce((sum, item) => sum + item.precio * item.quantity, 0);
+
+    const detallesProducto = itemsProductos.map(p => ({
+        cod_producto: p.id,
+        cantidad: p.quantity,
+        precio_unitario: p.precio,
+    }));
+    
+    const reservaData = servicio ? {
+        create: {
+            precio_total: totalGeneral, 
+            estado_reserva: 'Pendiente',
+            region: servicio.direccion?.region,
+            comuna: servicio.direccion?.comuna,
+            direccion: servicio.direccion?.direccion
+        }
+    } : undefined;
 
     const pedido = await db.pedido.create({
       data: {
@@ -36,22 +57,12 @@ export default defineEventHandler(async (event) => {
         precio_total: totalGeneral,
         estado_pedido: 'Pendiente',
         es_reserva: !!servicio,
-        detalles_pedido: producto ? {
-          create: {
-            cod_producto: producto.id,
-            cantidad: producto.quantity,
-            precio_unitario: producto.precio
-          }
-        } : undefined,
-        reserva: servicio ? {
-          create: {
-            precio_total: servicio.precio * servicio.quantity,
-            estado_reserva: 'Pendiente',
-            region: servicio.direccion?.region,
-            comuna: servicio.direccion?.comuna,
-            direccion: servicio.direccion?.direccion
-          }
-        } : undefined
+        
+        detalles_pedido: {
+            create: detallesProducto
+        },
+        
+        reserva: reservaData
       },
       include: {
         detalles_pedido: true,
@@ -60,9 +71,9 @@ export default defineEventHandler(async (event) => {
     });
 
     return {
-      statusCode: 200,
+      statusCode: 201, // 201 Created
       message: 'Pedido creado correctamente',
-      id_pedido: pedido.id_pedido,
+      id_pedido: pedido.id_pedido, 
       cod_trazabilidad: pedido.reserva?.cod_trazabilidad || null
     };
 

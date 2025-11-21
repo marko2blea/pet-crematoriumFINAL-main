@@ -187,7 +187,6 @@
                 <font-awesome-icon icon="fab fa-cc-mastercard" title="Mastercard" class="hover:text-white transition" />
                 <font-awesome-icon icon="fas fa-money-check-alt" title="Transferencia" class="hover:text-white transition" />
             </div>
-            <p class="text-sm text-white pt-2">Aceptamos transferencias y tarjetas de crédito.</p>
         </div>
 
         <div class="md:w-1/4 space-y-4 text-center md:text-left">
