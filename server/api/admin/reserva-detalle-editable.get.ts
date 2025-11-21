@@ -16,47 +16,73 @@ export default defineEventHandler(async (event) => {
                 pedido: { 
                     include: {
                         usuario: true, 
-                        detalles_pedido: { include: { producto: true } },
+                        // INCLUIR PRODUCTOS COMPRADOS
+                        detalles_pedido: { 
+                            include: { producto: true } 
+                        },
                     }
                 },
-                detalle_reserva: true
+                detalle_reserva: true,
             }
         });
 
-        if (!reservaDetalle) {
-            throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada.' });
+        if (!reservaDetalle || !reservaDetalle.pedido) {
+            throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada o pedido asociado faltante.' });
         }
         
-        // Manejo y formateo de fechas
+        // --- 1. Obtener Datos de la Mascota ---
+        let mascotaData = null;
+        if (reservaDetalle.pedido.usuario.id_usuario) {
+            // Buscamos la mascota más reciente asociada al usuario (la que se creó con el servicio)
+            const mascotas = await db.mascota.findMany({
+                where: { id_usuario: reservaDetalle.pedido.usuario.id_usuario },
+                orderBy: { id_mascota: 'desc' },
+                take: 1
+            });
+            if (mascotas.length > 0) {
+                mascotaData = {
+                    nombre: mascotas[0].nombre_mascota,
+                    peso: mascotas[0].peso?.toNumber() || 0, // Convertir Decimal a number
+                    edad: mascotas[0].edad,
+                };
+            }
+        }
+
+        // --- 2. Obtener Productos Comprados ---
+        const productosComprados = reservaDetalle.pedido.detalles_pedido.map(detalle => ({
+            nombre: detalle.producto?.nombre_producto || 'Ítem Desconocido',
+            cantidad: detalle.cantidad,
+            precio: detalle.precio_unitario.toNumber(), // Convertir Decimal a number
+        }));
+
+        // --- 3. Formatear la Respuesta ---
         const fechaReservada = reservaDetalle.fecha_reservada;
         const fechaReservadaISO = fechaReservada?.toISOString().split('T')[0] || '';
         const horaReservadaISO = fechaReservada ? new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaReservada) : '';
-
-        // ACCESO Y CONVERSIÓN CRÍTICA: Acceso seguro a precio_total desde 'pedido' y conversión.
-        const precioTotalNumerico = reservaDetalle.pedido?.precio_total?.toNumber() ?? 0;
-
+        const precioTotalNumerico = reservaDetalle.pedido.precio_total?.toNumber() ?? 0;
 
         return {
             id_reserva: reservaDetalle.id_reserva,
             cod_trazabilidad: reservaDetalle.cod_trazabilidad,
             estado_reserva: reservaDetalle.estado_reserva,
-            fecha_reservada: fechaReservadaISO, 
-            hora_reservada: horaReservadaISO, 
-            precio_total: precioTotalNumerico, 
+            fecha_reservada: fechaReservadaISO,
+            hora_reservada: horaReservadaISO,
+            precio_total: precioTotalNumerico,
             
-            // Datos del Usuario
-            nombre_cliente: reservaDetalle.pedido?.usuario?.nombre || 'Desconocido',
-            correo_cliente: reservaDetalle.pedido?.usuario?.correo || 'N/A',
-
-            // Datos de la Reserva
+            nombre_cliente: reservaDetalle.pedido.usuario.nombre || 'Desconocido',
+            correo_cliente: reservaDetalle.pedido.usuario.correo || 'N/A',
+            
+            // Nombre del Servicio
             nombre_servicio: reservaDetalle.detalle_reserva?.nombre_servicio || 'N/A',
             tipo_servicio: reservaDetalle.detalle_reserva?.tipo_servicio || 'N/A',
-
-            // Datos de la Dirección
+            
             region: reservaDetalle.region,
             comuna: reservaDetalle.comuna,
             direccion: reservaDetalle.direccion,
-            id_pedido: reservaDetalle.id_pedido
+
+            // NUEVOS DATOS
+            mascota_datos: mascotaData,
+            productos_comprados: productosComprados,
         };
 
     } catch (error: any) {

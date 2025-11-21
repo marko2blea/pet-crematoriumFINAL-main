@@ -36,12 +36,43 @@
 					<label class="block text-sm font-medium text-purple-deep">Precio Total</label>
 					<p class="mt-1 text-xl font-extrabold text-green-600">${{ reservaForm.precio_total?.toLocaleString('es-CL') ?? '0' }}</p>
 				</div>
-				<div class="p-3 bg-gray-50 rounded-lg">
+				
+				<div v-if="reservaForm.nombre_servicio && reservaForm.nombre_servicio !== 'N/A'" class="p-3 bg-gray-50 rounded-lg col-span-1 md:col-span-2">
 					<label class="block text-sm font-medium text-purple-deep">Servicio</label>
-					<p class="mt-1 text-gray-800">{{ reservaForm.nombre_servicio }} ({{ reservaForm.tipo_servicio }})</p>
+					<p class="mt-1 text-gray-800">{{ reservaForm.nombre_servicio }}</p>
 				</div>
 			</div>
 
+			<div v-if="reservaForm.mascota_datos && reservaForm.mascota_datos.nombre && reservaForm.mascota_datos.nombre !== 'N/A'" class="mt-6">
+				<h2 class="text-xl font-semibold border-b pb-3 text-dark-primary-blue">Información de la Mascota</h2>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+					<div class="p-3 bg-gray-50 rounded-lg">
+						<label class="block text-sm font-medium text-purple-deep">Nombre</label>
+						<p class="mt-1 font-bold text-gray-800">{{ reservaForm.mascota_datos.nombre }}</p>
+					</div>
+					<div class="p-3 bg-gray-50 rounded-lg">
+						<label class="block text-sm font-medium text-purple-deep">Peso (kg)</label>
+						<p class="mt-1 text-gray-800">{{ reservaForm.mascota_datos.peso ?? 'N/A' }}</p>
+					</div>
+					<div class="p-3 bg-gray-50 rounded-lg">
+						<label class="block text-sm font-medium text-purple-deep">Edad</label>
+						<p class="mt-1 text-gray-800">{{ reservaForm.mascota_datos.edad ?? 'N/A' }}</p>
+					</div>
+				</div>
+			</div>
+
+            <div v-if="reservaForm.productos_comprados && reservaForm.productos_comprados.length > 0" class="mt-6">
+				<h2 class="text-xl font-semibold border-b pb-3 text-dark-primary-blue">Productos Adicionales Comprados</h2>
+				<div class="space-y-3 pt-4 border-l border-gray-300 pl-4">
+					<div v-for="(producto, index) in reservaForm.productos_comprados" :key="index" class="p-3 bg-gray-50 rounded-lg flex justify-between items-center">
+						<span class="font-medium text-gray-800">{{ producto.nombre }}</span>
+						<span class="font-bold text-purple-dark">
+                            ({{ producto.cantidad }} x ${{ producto.precio.toLocaleString('es-CL') }})
+                        </span>
+					</div>
+				</div>
+			</div>
+            
 			<h2 class="text-xl font-semibold border-b pb-3 pt-4 text-dark-primary-blue">Asignación de Horario y Estado</h2>
 
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -88,7 +119,17 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faSave, faSpinner, faEdit } from '@fortawesome/free-solid-svg-icons';
 library.add(faSave, faSpinner, faEdit);
 
-// Interfaz que coincide con la respuesta aplanada del backend
+// Definición de interfaces
+interface ProductoComprado {
+    nombre: string;
+    cantidad: number;
+    precio: number;
+}
+interface MascotaDatos {
+    nombre: string;
+    peso: number;
+    edad: number;
+}
 interface ReservaDetalle {
     id_reserva: number;
     cod_trazabilidad: string;
@@ -104,23 +145,33 @@ interface ReservaDetalle {
     comuna: string | null;
     direccion: string | null;
     id_pedido: number;
+    mascota_datos: MascotaDatos | null; 
+    productos_comprados: ProductoComprado[]; 
 }
 
 const reservaForm = ref<Partial<ReservaDetalle>>({}); 
 const idReserva = ref<number | null>(null);
 const loading = ref(true);
-const saving = ref(false); // Estado para el botón de guardar
+const saving = ref(false); 
 const error = ref<string | null>(null);
 const route = useRoute();
-const router = useRouter(); // Usamos router para la navegación
+const router = useRouter(); 
 
 const fetchReservaData = async (id: number) => {
     loading.value = true;
     error.value = null;
     try {
-        const response = await $fetch<ReservaDetalle>(`/api/admin/reserva-detalle-editable`, {
+        const response = await $fetch(`/api/admin/reserva-detalle-editable`, {
             query: { id_reserva: id },
-        });
+        }) as ReservaDetalle;
+
+        // Asegurar que mascota_datos y productos_comprados no sean null/undefined
+        if (!response.mascota_datos) {
+            response.mascota_datos = { nombre: 'N/A', peso: 0, edad: 0 };
+        }
+        if (!response.productos_comprados) {
+             response.productos_comprados = [];
+        }
 
         reservaForm.value = response;
 
@@ -133,7 +184,6 @@ const fetchReservaData = async (id: number) => {
 };
 
 const handleCancel = () => {
-    // Redirigir a la lista de reservas o al dashboard principal
     router.push('/admin/dashboard'); 
 };
 
@@ -142,7 +192,6 @@ const handleSubmit = async () => {
     error.value = null;
 
     try {
-        // Enviar solo los campos editables y el ID
         const payload = {
             id_reserva: idReserva.value,
             estado_reserva: reservaForm.value.estado_reserva,
@@ -155,9 +204,7 @@ const handleSubmit = async () => {
             body: payload,
         });
 
-        alert(response.message);
-        // Opcional: Redirigir a la lista o recargar la página
-        // router.push('/admin/reservas'); 
+        alert((response as { message: string }).message);
         
     } catch (e: any) {
         console.error('Error al guardar:', e);
