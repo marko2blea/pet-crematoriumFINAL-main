@@ -74,7 +74,7 @@
               class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col"
             >
               <NuxtLink :to="`/detalle-producto?id=${producto.id}`" class="block flex flex-col flex-grow">
-                <div class="w-full h-40 object-cover bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
+                <div class="w-full h-40 bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
                     :src="producto.imagen_url || '/logo2.png'" 
                     :alt="producto.nombre" 
                     class="max-h-full max-w-full object-contain"
