@@ -1,21 +1,32 @@
+// server/api/admin/reserva-detalle-editable.get.ts
 import { db } from '../../utils/prisma';
 import { createError } from 'h3'; 
+// Importar 'Mascota' no es estrictamente necesario aquí, pero puede ayudar con tipado.
 
 export default defineEventHandler(async (event) => {
     const query = getQuery(event);
-    const idReserva = query.id_reserva as string;
+    
+    // CORRECCIÓN CLAVE: Leemos el parámetro 'id' que es el que se envía desde el frontend.
+    const idParam = query.id as string; 
 
-    if (!idReserva) {
-        throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva.' });
+    if (!idParam) {
+        throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva (query parameter "id").' });
+    }
+
+    const idReserva = parseInt(idParam);
+    if (isNaN(idReserva) || idReserva < 1) {
+        throw createError({ statusCode: 400, statusMessage: 'ID de reserva inválido.' });
     }
 
     try {
         const reservaDetalle = await db.reserva.findUnique({
-            where: { id_reserva: parseInt(idReserva) },
+            // Usamos el ID ya parseado y validado
+            where: { id_reserva: idReserva }, 
             include: {
                 pedido: { 
                     include: {
                         usuario: true, 
+                        // Relación plural ya corregida
                         detalles_pedido: { 
                             include: { producto: true } 
                         },
@@ -51,7 +62,8 @@ export default defineEventHandler(async (event) => {
         const productosComprados = reservaDetalle.pedido.detalles_pedido.map(detalle => ({
             nombre: detalle.producto?.nombre_producto || 'Ítem Desconocido',
             cantidad: detalle.cantidad,
-            precio: detalle.precio_unitario.toNumber(),
+            // Aseguramos la conversión de Decimal a Number
+            precio: detalle.precio_unitario.toNumber(), 
         }));
 
         // --- 3. Formatear la Respuesta ---

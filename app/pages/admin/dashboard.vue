@@ -2,177 +2,177 @@
   <div class="pt-14 py-16 min-h-screen container mx-auto px-4 space-y-8">
     
     <div class="border-b-2 border-gray-300 pb-3">
-        <h1 class="text-3xl font-bold text-purple-dark">Dashboard</h1>
+      <h1 class="text-3xl font-bold text-purple-dark">Dashboard</h1>
     </div>
 
     <div v-if="pendingStats" class="text-center p-10 bg-white rounded-xl shadow-lg">
-        <p class="text-lg font-semibold text-gray-500">Cargando estadísticas...</p>
+      <p class="text-lg font-semibold text-gray-500">Cargando estadísticas...</p>
     </div>
     <div v-else-if="statsError" class="text-center p-10 bg-red-50 rounded-xl shadow-lg border border-red-300">
-        <p class="text-lg font-semibold text-red-700">Error al cargar estadísticas: {{ statsError.message }}</p>
+      <p class="text-lg font-semibold text-red-700">Error al cargar estadísticas: {{ statsError.message }}</p>
     </div>
     <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-purple-deep text-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
-            <font-awesome-icon icon="fas fa-dollar-sign" class="text-4xl text-bd-gold-accent opacity-70" />
-            <div>
-                <p class="text-sm uppercase tracking-wider text-purple-200">Pagos Pendientes</p>
-                <p class="text-3xl font-extrabold">{{ (stats.pendingPayments ?? 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}</p>
-            </div>
+      <div class="bg-purple-deep text-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
+        <font-awesome-icon icon="fas fa-dollar-sign" class="text-4xl text-bd-gold-accent opacity-70" />
+        <div>
+          <p class="text-sm uppercase tracking-wider text-purple-200">Pagos Pendientes</p>
+          <p class="text-3xl font-extrabold">{{ (stats.pendingPayments ?? 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}</p>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
-            <font-awesome-icon icon="fas fa-clock" class="text-4xl text-yellow-500 opacity-70" />
-            <div>
-                <p class="text-sm uppercase tracking-wider text-gray-500">Servicios "En Proceso"</p>
-                <p class="text-3xl font-extrabold text-purple-dark">{{ stats.pendingServices ?? 0 }}</p>
-            </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
+        <font-awesome-icon icon="fas fa-clock" class="text-4xl text-yellow-500 opacity-70" />
+        <div>
+          <p class="text-sm uppercase tracking-wider text-gray-500">Servicios "En Proceso"</p>
+          <p class="text-3xl font-extrabold text-purple-dark">{{ stats.pendingServices ?? 0 }}</p>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
-            <font-awesome-icon icon="fas fa-boxes" class="text-4xl text-red-500 opacity-70" />
-            <div>
-                <p class="text-sm uppercase tracking-wider text-gray-500">Urnas con Bajo Stock (&lt;5)</p>
-                <p class="text-3xl font-extrabold text-purple-dark">{{ stats.lowStockItems ?? 0 }}</p>
-            </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
+        <font-awesome-icon icon="fas fa-boxes" class="text-4xl text-red-500 opacity-70" />
+        <div>
+          <p class="text-sm uppercase tracking-wider text-gray-500">Urnas con Bajo Stock (&lt;5)</p>
+          <p class="text-3xl font-extrabold text-purple-dark">{{ stats.lowStockItems ?? 0 }}</p>
         </div>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-2xl">
-            <h3 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
-                <font-awesome-icon icon="fas fa-bell" class="mr-2 text-purple-deep" />
-                Actividad Reciente (Pendientes de Pago)
-            </h3>
-            
-            <div v-if="pendingActivity" class="text-center py-10 text-gray-500">Cargando actividad...</div>
-            <div v-else-if="activityError" class="text-center py-10 text-red-600 bg-red-50">Error: {{ activityError.message }}</div>
-            <div v-else-if="!activityData || activityData.length === 0" class="text-center py-10 text-gray-500">
-                <font-awesome-icon icon="fas fa-check-circle" class="text-4xl text-green-500 mb-3" />
-                <p class="font-semibold">¡Todo al día!</p>
-                <p>No hay reservas pendientes de pago.</p>
-            </div>
-            <div v-else class="space-y-4">
-                <NuxtLink 
-                  v-for="reserva in activityData" 
-                  :key="reserva.id_reserva" 
-                  :to="`/admin/editar-reserva?id=${reserva.id_reserva}`"
-                  class="block p-4 rounded-lg hover:bg-purple-card transition duration-150 border-l-4 border-yellow-500 bg-white-subtle shadow-sm"
-                >
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-purple-dark">{{ reserva.servicio }}</p>
-                            <p class="text-sm text-gray-700">Cliente: <span class="font-semibold">{{ reserva.cliente }}</span></p>
-                        </div>
-                        <div class="text-right flex-shrink-0 ml-4">
-                            <p class="font-bold text-dark-primary-blue text-lg">{{ reserva.monto.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}</p>
-                            <p class="text-sm text-gray-500">{{ reserva.fecha }}</p>
-                        </div>
-                    </div>
-                </NuxtLink>
-            </div>
+      <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-2xl">
+        <h3 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
+          <font-awesome-icon icon="fas fa-bell" class="mr-2 text-purple-deep" />
+          Actividad Reciente (Pendientes de Pago)
+        </h3>
+        
+        <div v-if="pendingActivity" class="text-center py-10 text-gray-500">Cargando actividad...</div>
+        <div v-else-if="activityError" class="text-center py-10 text-red-600 bg-red-50">Error: {{ activityError.message }}</div>
+        <div v-else-if="!activityData || activityData.length === 0" class="text-center py-10 text-gray-500">
+          <font-awesome-icon icon="fas fa-check-circle" class="text-4xl text-green-500 mb-3" />
+          <p class="font-semibold">¡Todo al día!</p>
+          <p>No hay reservas pendientes de pago.</p>
         </div>
+        <div v-else class="space-y-4">
+          <NuxtLink 
+            v-for="reserva in activityData" 
+            :key="reserva.id_reserva" 
+            :to="`/admin/editar-reserva?id=${reserva.id_reserva}`"
+            class="block p-4 rounded-lg hover:bg-purple-card transition duration-150 border-l-4 border-yellow-500 bg-white-subtle shadow-sm"
+          >
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-bold text-purple-dark">{{ reserva.servicio }}</p>
+                <p class="text-sm text-gray-700">Cliente: <span class="font-semibold">{{ reserva.cliente }}</span></p>
+              </div>
+              <div class="text-right flex-shrink-0 ml-4">
+                <p class="font-bold text-dark-primary-blue text-lg">{{ reserva.monto.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}</p>
+                <p class="text-sm text-gray-500">{{ reserva.fecha }}</p>
+              </div>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
 
-        <div classs="space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-2xl">
-                <h3 class="text-2xl font-bold text-purple-dark mb-4">
-                    <font-awesome-icon icon="fas fa-rocket" class="mr-2" />
-                    Atajos Rápidos
-                </h3>
-                <div class="space-y-3">
-                    <a href="#gestion-reservas" class="shortcut-link bg-purple-deep hover:bg-purple-light">
-                        <font-awesome-icon icon="fas fa-book" class="mr-3" />
-                        Gestionar Reservas
-                    </a>
-                    <NuxtLink to="/admin/inventario" class="shortcut-link bg-purple-dark hover:bg-purple-light">
-                        <font-awesome-icon icon="fas fa-boxes" class="mr-3" />
-                        Gestionar Inventario
-                    </NuxtLink>
-                    <NuxtLink to="/admin/gestionar-usuario" class="shortcut-link bg-purple-dark hover:bg-purple-light">
-                        <font-awesome-icon icon="fas fa-users" class="mr-3" />
-                        Gestionar Usuarios
-                    </NuxtLink>
-                    <NuxtLink to="/admin/reportes" class="shortcut-link bg-bd-gold-accent text-purple-dark hover:bg-yellow-400">
-                        <font-awesome-icon icon="fas fa-chart-line" class="mr-3" />
-                        Ver Reportes
-                    </NuxtLink>
-                </div>
-            </div>
+      <div classs="space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-2xl">
+          <h3 class="text-2xl font-bold text-purple-dark mb-4">
+            <font-awesome-icon icon="fas fa-rocket" class="mr-2" />
+            Atajos Rápidos
+          </h3>
+          <div class="space-y-3">
+            <a href="#gestion-reservas" class="shortcut-link bg-purple-deep hover:bg-purple-light">
+              <font-awesome-icon icon="fas fa-book" class="mr-3" />
+              Gestionar Reservas
+            </a>
+            <NuxtLink to="/admin/inventario" class="shortcut-link bg-purple-dark hover:bg-purple-light">
+              <font-awesome-icon icon="fas fa-boxes" class="mr-3" />
+              Gestionar Inventario
+            </NuxtLink>
+            <NuxtLink to="/admin/gestionar-usuario" class="shortcut-link bg-purple-dark hover:bg-purple-light">
+              <font-awesome-icon icon="fas fa-users" class="mr-3" />
+              Gestionar Usuarios
+            </NuxtLink>
+            <NuxtLink to="/admin/reportes" class="shortcut-link bg-bd-gold-accent text-purple-dark hover:bg-yellow-400">
+              <font-awesome-icon icon="fas fa-chart-line" class="mr-3" />
+              Ver Reportes
+            </NuxtLink>
+          </div>
         </div>
+      </div>
     </div>
 
     <div id="gestion-reservas" class="mt-12">
       <div class="flex flex-wrap justify-between items-center mb-8 border-b-2 border-gray-300 pb-3 gap-4">
-          <h1 class="text-3xl font-bold text-purple-dark">Gestión de Reservas</h1>
-          
-          <div class="flex space-x-3 items-center">
-              <label for="statusFilter" class="text-sm font-semibold text-dark-primary-blue">Filtrar por Estado (Pago):</label>
-              <select 
-                v-model="filterStatus"
-                id="statusFilter" 
-                class="p-2 border border-gray-300 rounded-lg focus:border-purple-deep focus:ring-1 focus:ring-purple-deep"
-              >
-                  <option value="Todos">Todos</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Pagado">Pagado</option>
-                  <option value="Cancelado">Cancelado</option>
-              </select>
-          </div>
+        <h1 class="text-3xl font-bold text-purple-dark">Gestión de Reservas</h1>
+        
+        <div class="flex space-x-3 items-center">
+          <label for="statusFilter" class="text-sm font-semibold text-dark-primary-blue">Filtrar por Estado (Pago):</label>
+          <select 
+            v-model="filterStatus"
+            id="statusFilter" 
+            class="p-2 border border-gray-300 rounded-lg focus:border-purple-deep focus:ring-1 focus:ring-purple-deep"
+          >
+            <option value="Todos">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
-          <div v-if="pendingReservations" class="text-center py-10 text-gray-500">Cargando reservas...</div>
-          <div v-else-if="errorReservations" class="text-center py-10 text-red-600 bg-red-50">
-              Error al cargar las reservas: {{ errorReservations.message }}
-          </div>
-          
-          <table v-else-if="reservations && reservations.length > 0" class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-purple-dark text-white">
-                  <tr>
-                      <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">ID Pedido</th>
-                      <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cliente</th>
-                      <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mascota</th>
-                      <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Servicio</th>
-                      <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cód. Trazabilidad</th>
-                      <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Pago</th>
-                      <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Reserva</th>
-                      <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider">Monto</th>
-                      <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Acciones</th>
-                  </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="reserva in reservations" :key="reserva.id" class="hover:bg-purple-card transition duration-150">
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-primary-blue">{{ reserva.id }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                          <p class="text-sm font-semibold text-purple-dark">{{ reserva.clientName }}</p>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.petName }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.serviceName }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-deep">{{ reserva.trackingCode }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-center">
-                          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                :class="{
-                                  'bg-yellow-100 text-yellow-800': reserva.status === 'Pendiente',
-                                  'bg-green-100 text-green-800': reserva.status === 'Pagado',
-                                  'bg-red-100 text-red-800': reserva.status === 'Cancelado'
-                                }">
-                              {{ reserva.status }}
-                          </span>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-700">
-                          {{ reserva.statusReserva }}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-dark-primary-blue">
-                          ${{ reserva.amount.toLocaleString('es-CL') }}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                          <button @click="editReserva(reserva.id)" class="text-purple-deep hover:text-purple-light p-1 rounded-full transition duration-150 ml-2" title="Editar Reserva">
-                              <font-awesome-icon icon="fas fa-pencil-alt" />
-                          </button>
-                      </td>
-                  </tr>
-              </tbody>
-          </table>
-          <div v-else class="text-center py-10 text-gray-500">
-              No se encontraron reservas que coincidan con el filtro.
-          </div>
+        <div v-if="pendingReservations" class="text-center py-10 text-gray-500">Cargando reservas...</div>
+        <div v-else-if="errorReservations" class="text-center py-10 text-red-600 bg-red-50">
+          Error al cargar las reservas: {{ errorReservations.message }}
+        </div>
+        
+        <table v-else-if="reservations && reservations.length > 0" class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-purple-dark text-white">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">ID Pedido</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cliente</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mascota</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Servicio</th>
+              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cód. Trazabilidad</th>
+              <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Pago</th>
+              <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Reserva</th>
+              <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider">Monto</th>
+              <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="reserva in reservations" :key="reserva.id_pedido" class="hover:bg-purple-card transition duration-150">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-primary-blue">{{ reserva.id_pedido }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <p class="text-sm font-semibold text-purple-dark">{{ reserva.cliente }}</p>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.petName || 'N/A' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.nombreServicio }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-deep">{{ reserva.cod_trazabilidad }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-center">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                    :class="{
+                      'bg-yellow-100 text-yellow-800': reserva.estadoPedido === 'Pendiente',
+                      'bg-green-100 text-green-800': reserva.estadoPedido === 'Pagado',
+                      'bg-red-100 text-red-800': reserva.estadoPedido === 'Cancelado'
+                    }">
+                  {{ reserva.estadoPedido }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-700">
+                {{ reserva.estadoReserva }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-dark-primary-blue">
+                {{ reserva.monto.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                <button @click="editReserva(reserva.id_pedido)" class="text-purple-deep hover:text-purple-light p-1 rounded-full transition duration-150 ml-2" title="Editar Reserva">
+                  <font-awesome-icon icon="fas fa-pencil-alt" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else class="text-center py-10 text-gray-500">
+          No se encontraron reservas que coincidan con el filtro.
+        </div>
       </div>
     </div>
 
@@ -184,28 +184,28 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { 
-    faDollarSign, faClock, faUserPlus, faBell, faCheckCircle, 
-    faRocket, faBook, faBoxes, faUsers, faChartLine,
-    faEye, faPencilAlt // (NUEVO) Iconos de reservas
+  faDollarSign, faClock, faUserPlus, faBell, faCheckCircle, 
+  faRocket, faBook, faBoxes, faUsers, faChartLine,
+  faEye, faPencilAlt
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(
-    faDollarSign, faClock, faUserPlus, faBell, faCheckCircle,
-    faRocket, faBook, faBoxes, faUsers, faChartLine,
-    faEye, faPencilAlt // (NUEVO)
+  faDollarSign, faClock, faUserPlus, faBell, faCheckCircle,
+  faRocket, faBook, faBoxes, faUsers, faChartLine,
+  faEye, faPencilAlt
 );
 
 definePageMeta({
   middleware: 'auth'
 });
 
-const router = useRouter(); // (NUEVO) Router para la tabla de reservas
+const router = useRouter();
 
 // --- Carga de Datos de KPIs (Dashboard) ---
 interface DashboardStats {
-    pendingServices: number;
-    pendingPayments: number;
-    lowStockItems: number;
+  pendingServices: number;
+  pendingPayments: number;
+  lowStockItems: number;
 }
 const { 
   data: stats, 
@@ -225,11 +225,11 @@ const {
 
 // --- Carga de datos de "Actividad Reciente" (Dashboard) ---
 interface RecentActivity {
-    id_reserva: number;
-    cliente: string;
-    servicio: string;
-    monto: number;
-    fecha: string;
+  id_reserva: number;
+  cliente: string;
+  servicio: string;
+  monto: number;
+  fecha: string;
 }
 const { 
   data: activityData, 
@@ -244,38 +244,45 @@ const {
 );
 
 
-// --- (NUEVO) Carga de Datos de la TABLA DE RESERVAS ---
+// --- Carga de Datos de la TABLA DE RESERVAS (CORREGIDO) ---
 const filterStatus = ref('Todos');
 
+// 🔥 CORRECCIÓN: Interfaz alineada con el BE (server/api/admin/reservas.get.ts)
 interface Reserva {
-    id: number;
-    clientName: string;
-    petName: string;
-    serviceName: string;
-    trackingCode: string | null;
-    status: 'Pendiente' | 'Pagado' | 'Cancelado';
-    statusReserva: string;
-    amount: number;
+  id_pedido: number;
+  cliente: string;
+  nombreServicio: string;
+  cod_trazabilidad: string | null;
+  estadoPedido: 'Pendiente' | 'Pagado' | 'Cancelado' | string;
+  estadoReserva: string;
+  monto: number;
+  // Añadimos petName aunque el backend no lo esté enviando, para evitar un error de tipado
+  petName?: string; 
 }
 
+// El backend devuelve un objeto { pedidos: Reserva[], total: number, ... }
 const apiUrl = '/api/admin/reservas';
 const { 
-  data: reservations, 
+  data: responseData, // Usamos responseData para capturar el objeto completo
   pending: pendingReservations, 
   error: errorReservations,
-} = await useAsyncData<Reserva[]>(
+} = await useAsyncData<{ pedidos: Reserva[], total: number }>(
   'lista-reservas',
   () => $fetch(apiUrl, { 
     params: { status: filterStatus.value } 
   }),
   {
-    default: () => [],
-    watch: [filterStatus] // Recarga la tabla cuando el filtro cambia
+    default: () => ({ pedidos: [], total: 0 }), // Default ahora es un objeto
+    watch: [filterStatus]
   }
 );
 
-// --- (NUEVO) Funciones de la TABLA DE RESERVAS ---
+// 🔥 CORRECCIÓN: Usamos computed para extraer solo el array de pedidos
+const reservations = computed(() => responseData.value?.pedidos || []);
+
+// --- Funciones de la TABLA DE RESERVAS ---
 const editReserva = (id: number) => {
+    // 🔥 CORRECCIÓN: Usamos id_pedido para navegar
     router.push(`/admin/editar-reserva?id=${id}`);
 };
 
