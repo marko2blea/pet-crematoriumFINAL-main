@@ -7,7 +7,7 @@
           <img src="/fondo nosotros.jpg" alt="Fondo Sobre Nosotros" class="w-full h-full object-cover">
       </div>
       <div class="relative z-20 max-w-3xl text-center">
-          <img src="/logo2.png" alt="Logo Crematorio" class="w-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg">
+          <img src="/logo.png" alt="Logo Crematorio" class="w-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg">
           <h1 class="text-4xl md:text-6xl font-extrabold mb-4 leading-tight" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">
               Sobre Nosotros
           </h1>

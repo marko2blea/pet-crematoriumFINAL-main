@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
         nombre: p.nombre_producto || 'Sin Nombre',
         precio: Number(p.precio_unitario) || 0,
         tipo: p.tipo_producto || 'Otro',
+        imagen_url: p.imagen_url,
       };
     });
 

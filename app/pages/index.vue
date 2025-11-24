@@ -32,8 +32,12 @@
               class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col"
             >
               <NuxtLink :to="`/detalle-producto?id=${servicio.id}`" class="block flex flex-col flex-grow">
-                <div class="w-full h-40 object-cover bg-gray-200 flex items-center justify-center">
-                  <img src="/logo2.png" alt="Logo de producto" class="h-20 opacity-30"/>
+                <div class="w-full h-40 bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
+                    :src="servicio.imagen_url || '/logo2.png'" 
+                    :alt="servicio.nombre" 
+                    class="max-h-full max-w-full object-contain"
+                    @error="servicio.imagen_url = '/logo2.png'"
+                  />
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
                   <span class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start">
@@ -70,8 +74,12 @@
               class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col"
             >
               <NuxtLink :to="`/detalle-producto?id=${producto.id}`" class="block flex flex-col flex-grow">
-                <div class="w-full h-40 object-cover bg-gray-200 flex items-center justify-center">
-                  <img src="/logo2.png" alt="Logo de producto" class="h-20 opacity-30"/>
+                <div class="w-full h-40 object-cover bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
+                    :src="producto.imagen_url || '/logo2.png'" 
+                    :alt="producto.nombre" 
+                    class="max-h-full max-w-full object-contain"
+                    @error="producto.imagen_url = '/logo2.png'"
+                  />
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
                   <span class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start">
@@ -137,23 +145,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'; // Se necesita 'computed' para el filtrado reactivo
+import { computed } from 'vue'; 
 import type { Product } from '../../app/types';
 
-// 1. Cargar todos los productos desde el API. El resultado es reactivo (Ref<Product[] | null>).
-// Reemplaza '/api/productos' por tu ruta real.
+// NOTA IMPORTANTE:
+// Tu interfaz Product en '../../app/types' DEBE incluir:
+// interface Product {
+//   id: number; 
+//   nombre: string;
+//   tipo: string; // <-- Asegúrate que los valores aquí (e.g., 'Servicio', 'Urna') coincidan EXACTAMENTE con tu BD
+//   precio: number;
+//   imagen_url?: string | null; 
+// }
+
 const { data: allProductos } = await useAsyncData<Product[]>('productos-index', () => $fetch('/api/productos'));
 
-// 2. Filtra Servicios de forma reactiva
 const servicios = computed(() => {
-  // Maneja el caso en que los datos aún no se han cargado (allProductos.value es null)
   if (!allProductos.value) return [];
   return allProductos.value.filter(p => p.tipo === 'Servicio');
 });
 
-// 3. Filtra Urnas y Accesorios de forma reactiva
 const productos_filtrados = computed(() => {
-  // Maneja el caso en que los datos aún no se han cargado
   if (!allProductos.value) return [];
   return allProductos.value.filter(p => p.tipo === 'Urna' || p.tipo === 'Accesorio');
 });

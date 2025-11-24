@@ -26,6 +26,7 @@ export type Product = {
   nombre: string;
   precio: number;
   tipo: string;
+  imagen_url?: string | null;
 }
 
 export type CartItem = {
