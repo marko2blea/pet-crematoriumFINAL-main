@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <div classs="space-y-6">
+      <div class="space-y-6"> 
         <div class="bg-white p-6 rounded-xl shadow-2xl">
           <h3 class="text-2xl font-bold text-purple-dark mb-4">
             <font-awesome-icon icon="fas fa-rocket" class="mr-2" />
@@ -129,9 +129,7 @@
               <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">ID Pedido</th>
               <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cliente</th>
               <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mascota</th>
-              <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Servicio</th>
               <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Cód. Trazabilidad</th>
-              <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Pago</th>
               <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Estado Reserva</th>
               <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider">Monto</th>
               <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Acciones</th>
@@ -144,18 +142,7 @@
                 <p class="text-sm font-semibold text-purple-dark">{{ reserva.cliente }}</p>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.petName || 'N/A' }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ reserva.nombreServicio }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-deep">{{ reserva.cod_trazabilidad }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    :class="{
-                      'bg-yellow-100 text-yellow-800': reserva.estadoPedido === 'Pendiente',
-                      'bg-green-100 text-green-800': reserva.estadoPedido === 'Pagado',
-                      'bg-red-100 text-red-800': reserva.estadoPedido === 'Cancelado'
-                    }">
-                  {{ reserva.estadoPedido }}
-                </span>
-              </td>
               <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-700">
                 {{ reserva.estadoReserva }}
               </td>
@@ -244,26 +231,23 @@ const {
 );
 
 
-// --- Carga de Datos de la TABLA DE RESERVAS (CORREGIDO) ---
+// --- Carga de Datos de la TABLA DE RESERVAS ---
 const filterStatus = ref('Todos');
 
-// 🔥 CORRECCIÓN: Interfaz alineada con el BE (server/api/admin/reservas.get.ts)
 interface Reserva {
   id_pedido: number;
   cliente: string;
-  nombreServicio: string;
+  nombreServicio: string; // Aunque ya no se muestre, el backend lo envía
   cod_trazabilidad: string | null;
-  estadoPedido: 'Pendiente' | 'Pagado' | 'Cancelado' | string;
+  estadoPedido: 'Pendiente' | 'Pagado' | 'Cancelado' | string; // Aunque ya no se muestre, el backend lo envía
   estadoReserva: string;
   monto: number;
-  // Añadimos petName aunque el backend no lo esté enviando, para evitar un error de tipado
   petName?: string; 
 }
 
-// El backend devuelve un objeto { pedidos: Reserva[], total: number, ... }
 const apiUrl = '/api/admin/reservas';
 const { 
-  data: responseData, // Usamos responseData para capturar el objeto completo
+  data: responseData, 
   pending: pendingReservations, 
   error: errorReservations,
 } = await useAsyncData<{ pedidos: Reserva[], total: number }>(
@@ -272,17 +256,15 @@ const {
     params: { status: filterStatus.value } 
   }),
   {
-    default: () => ({ pedidos: [], total: 0 }), // Default ahora es un objeto
+    default: () => ({ pedidos: [], total: 0 }), 
     watch: [filterStatus]
   }
 );
 
-// 🔥 CORRECCIÓN: Usamos computed para extraer solo el array de pedidos
 const reservations = computed(() => responseData.value?.pedidos || []);
 
 // --- Funciones de la TABLA DE RESERVAS ---
 const editReserva = (id: number) => {
-    // 🔥 CORRECCIÓN: Usamos id_pedido para navegar
     router.push(`/admin/editar-reserva?id=${id}`);
 };
 

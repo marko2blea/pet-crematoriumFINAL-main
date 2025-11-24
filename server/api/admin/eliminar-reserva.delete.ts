@@ -1,149 +1,71 @@
 // server/api/admin/eliminar-reserva.delete.ts
 import { db } from '../../utils/prisma';
-
-/**
- * API para ELIMINAR o MARCAR COMO PAGADO un Pedido/Reserva.
- * Ruta: /api/admin/eliminar-reserva
- * Método: DELETE
- *
- * Body esperado (JSON):
- * {
- *   id: number,                 // id_pedido
- *   action?: 'delete' | 'markPaid'  // 'delete' por defecto
- * }
- *
- * - action = 'delete' : elimina pedido, reserva, detalle_reserva y pago (transaccional).
- * - action = 'markPaid': marca pago/pedido/reserva como 'Pagado' y genera cod_trazabilidad si falta.
- */
-function generateTrackingCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let out = '';
-  for (let i = 0; i < 8; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
-  return `${out.substring(0,3)}-${out.substring(3,8)}`;
-}
+import { defineEventHandler, getQuery, createError } from 'h3';
 
 export default defineEventHandler(async (event) => {
-  try {
-    const body = await readBody(event);
-    const pedidoId = body?.id ?? (getQuery(event).id ? Number(getQuery(event).id) : undefined);
-    const action: 'delete' | 'markPaid' = body?.action ?? 'delete';
+    const query = getQuery(event);
+    const idParam = query.id as string;
 
-    if (!pedidoId || isNaN(Number(pedidoId))) {
-      throw createError({ statusCode: 400, statusMessage: 'ID de pedido no válido o no proporcionado.' });
+    if (!idParam) {
+        throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva a eliminar.' });
     }
+    const idReserva = parseInt(idParam);
 
-    // 1) Obtener información necesaria del pedido/reserva
-    const pedido = await db.pedido.findUnique({
-      where: { id_pedido: Number(pedidoId) },
-      select: {
-        id_pedido: true,
-        id_pago: true,
-        reserva: {
-          select: {
-            id_reserva: true,
-            id_detalle_reserva: true,
-            cod_trazabilidad: true
-          }
-        }
-      }
-    });
+    try {
+        // Usa una transacción para asegurar que todas las entradas relacionadas se eliminen
+        const result = await db.$transaction(async (tx) => {
+            
+            // 1. Obtener el ID del pedido y detalle_reserva asociado
+            const reserva = await tx.reserva.findUnique({
+                where: { id_reserva: idReserva },
+                select: { id_pedido: true, id_detalle_reserva: true }
+            });
 
-    if (!pedido) {
-      throw createError({ statusCode: 404, statusMessage: 'Pedido no encontrado.' });
-    }
+            if (!reserva) {
+                // No se lanza un 404 para evitar que la transacción falle completamente,
+                // pero se devuelve un error de tipo para control.
+                return 'NOT_FOUND'; 
+            }
 
-    // ---------- ACCION: marcar como pagado ----------
-    if (action === 'markPaid') {
-      // transacción: actualizar pago, pedido y reserva (si existen)
-      const txResult = await db.$transaction(async (tx) => {
-        const ops: any[] = [];
+            // 2. Eliminar la reserva
+            await tx.reserva.delete({
+                where: { id_reserva: idReserva }
+            });
+            
+            // 3. Eliminar el Detalle_Reserva asociado (si existe y si no está en CASCADE)
+            if (reserva.id_detalle_reserva) {
+                await tx.detalle_Reserva.delete({
+                    where: { id_detalle_reserva: reserva.id_detalle_reserva }
+                });
+            }
 
-        // 1. Actualizar Pago (si existe)
-        if (pedido.id_pago) {
-          ops.push(tx.pago.update({
-            where: { id_pago: Number(pedido.id_pago) },
-            data: { estado: 'Pagado', fecha_pago: new Date() }
-          }));
-        }
+            // 4. Eliminar el Pedido.
+            // Esto debería eliminar DetallePedido, Pago y Envio anidados vía CASCADE en Prisma.
+            if (reserva.id_pedido) {
+                await tx.pedido.delete({
+                    where: { id_pedido: reserva.id_pedido }
+                });
+            }
 
-        // 2. Actualizar Pedido
-        ops.push(tx.pedido.update({
-          where: { id_pedido: Number(pedidoId) },
-          data: { estado_pedido: 'Pagado' }
-        }));
-
-        // 3. Actualizar Reserva (si existe): marcar 'Pagado', generar cod_trazabilidad si falta
-        if (pedido.reserva && pedido.reserva.id_reserva) {
-          const updateData: any = { estado_reserva: 'Pagado' };
-
-          if (!pedido.reserva.cod_trazabilidad) {
-            updateData.cod_trazabilidad = generateTrackingCode();
-          }
-
-          ops.push(tx.reserva.update({
-            where: { id_reserva: Number(pedido.reserva.id_reserva) },
-            data: updateData
-          }));
-        }
-
-        return await Promise.all(ops);
-      });
-
-      return {
-        statusCode: 200,
-        message: 'Pedido/Reserva marcado(s) como Pagado correctamente.',
-        result: txResult
-      };
-    }
-
-    // ---------- ACCION: delete ----------
-    // Queremos eliminar en orden que no rompa constraints:
-    // 1) si existe id_detalle_reserva => eliminar detalle_reserva
-    // 2) eliminar pedido (cascade eliminará detalles_pedido, reserva, envio por tu schema)
-    // 3) eliminar pago (si existe)
-    await db.$transaction(async (tx) => {
-
-      // 1) borrar Detalle_Reserva si existe (no se borra en cascada por diseño)
-      if (pedido.reserva && pedido.reserva.id_detalle_reserva) {
-        // chequea existencia por si acaso
-        const det = await tx.detalle_Reserva.findUnique({
-          where: { id_detalle_reserva: Number(pedido.reserva.id_detalle_reserva) },
-          select: { id_detalle_reserva: true }
+            return 'DELETED';
         });
-        if (det) {
-          await tx.detalle_Reserva.delete({
-            where: { id_detalle_reserva: det.id_detalle_reserva }
-          });
+        
+        if (result === 'NOT_FOUND') {
+             throw createError({ statusCode: 404, statusMessage: `Reserva #${idReserva} no encontrada.` });
         }
-      }
 
-      // 2) eliminar Pedido (esto, por tu schema, debería cascadar DetallePedido, Reserva y Envio)
-      await tx.pedido.delete({
-        where: { id_pedido: Number(pedidoId) }
-      });
 
-      // 3) eliminar Pago si existe (lo hacemos al final para evitar FK issues)
-      if (pedido.id_pago) {
-        // Asegurarse que el pago aún exista
-        const p = await tx.pago.findUnique({ where: { id_pago: Number(pedido.id_pago) }, select: { id_pago: true } });
-        if (p) {
-          await tx.pago.delete({ where: { id_pago: p.id_pago } });
-        }
-      }
-    });
+        return {
+            statusCode: 200,
+            message: `Reserva #${idReserva} y pedido asociado eliminados correctamente.`
+        };
 
-    return {
-      statusCode: 200,
-      message: 'Pedido (y recursos relacionados) eliminado exitosamente.'
-    };
-
-  } catch (error: any) {
-    console.error('Error en eliminar-reserva.delete:', error);
-
-    if (error?.code === 'P2025') {
-      throw createError({ statusCode: 404, statusMessage: 'Elemento no encontrado al intentar eliminar.' });
+    } catch (error) {
+        console.error('Error al eliminar la reserva:', error);
+        // El error 500 debe ser revisado en los logs del servidor
+        throw createError({
+            statusCode: 500,
+            statusMessage: 'Error interno al eliminar la reserva. Verifique la configuración CASCADE en el esquema Prisma.'
+        });
     }
-
-    throw createError({ statusCode: 500, statusMessage: error?.message || 'Error interno al procesar la solicitud.' });
-  }
 });
