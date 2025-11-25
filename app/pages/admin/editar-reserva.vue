@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <h2 class="text-xl font-semibold border-b pb-3 text-dark-primary-blue mt-4">Datos del Cliente (No Editables)</h2>
+            <h2 class="text-xl font-semibold border-b pb-3 text-dark-primary-blue mt-4">Datos del Cliente</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="p-3 bg-gray-50 rounded-lg">
@@ -295,3 +295,19 @@ onMounted(() => {
     }
 });
 </script>
+
+<style scoped>
+.form-input { 
+  width: 100%; 
+  padding: 0.75rem; 
+  border: 1px solid #d1d5db; 
+  border-radius: 0.5rem; 
+  outline: none; 
+}
+.text-purple-dark { color: #4A235A; }
+.bg-purple-dark { background-color: #4A235A; }
+.bg-purple-light { background-color: #6C3483; }
+.bg-purple-deep { background-color: #5C2A72; }
+.text-dark-primary-blue { color: #34495e; }
+.border-bd-gold-accent { border-color: #FFD700; }
+</style>

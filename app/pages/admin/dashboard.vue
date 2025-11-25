@@ -149,8 +149,10 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-dark-primary-blue">
                 {{ reserva.monto.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button @click="editReserva(reserva.id_pedido)" class="text-purple-deep hover:text-purple-light p-1 rounded-full transition duration-150 ml-2" title="Editar Reserva">
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                <button @click="editReserva(reserva.id_pedido)" 
+                        class="text-purple-deep hover:text-purple-light p-1 rounded-full transition duration-150" 
+                        title="Editar Reserva">
                   <font-awesome-icon icon="fas fa-pencil-alt" />
                 </button>
               </td>
@@ -173,13 +175,13 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { 
   faDollarSign, faClock, faUserPlus, faBell, faCheckCircle, 
   faRocket, faBook, faBoxes, faUsers, faChartLine,
-  faEye, faPencilAlt
+  faEye, faPencilAlt, faTrash, faSpinner // 🔥 AGREGADO faTrash y faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 
 library.add(
   faDollarSign, faClock, faUserPlus, faBell, faCheckCircle,
   faRocket, faBook, faBoxes, faUsers, faChartLine,
-  faEye, faPencilAlt
+  faEye, faPencilAlt, faTrash, faSpinner // 🔥 AGREGADO faTrash y faSpinner
 );
 
 definePageMeta({
@@ -187,6 +189,44 @@ definePageMeta({
 });
 
 const router = useRouter();
+
+// ------------------------------------
+// 🔥 LÓGICA DE ELIMINACIÓN
+// ------------------------------------
+const deletingIds = ref<Set<number>>(new Set()); 
+const isDeleting = (id: number) => deletingIds.value.has(id);
+
+const handleDelete = async (idReserva: number) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar la reserva #${idReserva}? Esta acción es irreversible.`)) {
+        return;
+    }
+
+    deletingIds.value.add(idReserva); // Activa el spinner
+    
+    try {
+        // Llama al endpoint DELETE
+        const response = await $fetch(`/api/admin/eliminar-reserva`, {
+            method: 'DELETE',
+            query: { id: idReserva },
+        });
+
+        alert((response as { message: string }).message);
+        
+        // Recarga los datos de la tabla (función refresh obtenida de useAsyncData)
+        await refresh(); 
+        
+    } catch (e: any) {
+        console.error('Error al eliminar:', e);
+        const errorMessage = e.data?.statusMessage || 'Fallo al eliminar la reserva. Verifique la conexión.';
+        alert(errorMessage);
+    } finally {
+        deletingIds.value.delete(idReserva); // Desactiva el spinner
+    }
+};
+// ------------------------------------
+// FIN LÓGICA DE ELIMINACIÓN
+// ------------------------------------
+
 
 // --- Carga de Datos de KPIs (Dashboard) ---
 interface DashboardStats {
@@ -250,6 +290,7 @@ const {
   data: responseData, 
   pending: pendingReservations, 
   error: errorReservations,
+  refresh // 🔥 OBTENEMOS ESTA FUNCIÓN PARA RECARGAR LA TABLA DESPUÉS DE BORRAR
 } = await useAsyncData<{ pedidos: Reserva[], total: number }>(
   'lista-reservas',
   () => $fetch(apiUrl, { 
@@ -265,7 +306,7 @@ const reservations = computed(() => responseData.value?.pedidos || []);
 
 // --- Funciones de la TABLA DE RESERVAS ---
 const editReserva = (id: number) => {
-    router.push(`/admin/editar-reserva?id=${id}`);
+  router.push(`/admin/editar-reserva?id=${id}`);
 };
 
 </script>
@@ -307,4 +348,7 @@ const editReserva = (id: number) => {
 .text-green-800 { color: #155724; }
 .bg-red-100 { background-color: #f8d7da; }
 .text-red-800 { color: #721c24; }
+.text-red-600 { color: #dc2626; } 
+.hover\:text-red-700:hover { color: #b91c1c; }
+.disabled\:opacity-50:disabled { opacity: 0.5; }
 </style>

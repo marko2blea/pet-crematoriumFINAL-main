@@ -78,14 +78,16 @@ model Producto {
 model Pedido {
   id_pedido       Int             @id @default(autoincrement())
   id_usuario      Int
-  id_pago         Int?            @unique
+  id_pago         Int?            @unique // Esta es la clave foránea (FK)
   fecha_pedido    DateTime        @default(now())
   precio_total    Decimal         @db.Decimal(10, 2)
   estado_pedido   String          @default("Pendiente")
   es_reserva      Boolean
 
   usuario         Usuario         @relation(fields: [id_usuario], references: [id_usuario])
-  pago            Pago?           @relation(fields: [id_pago], references: [id_pago])
+  // ✅ CORRECCIÓN: onDelete: SetNull VA AQUÍ, en la relación que usa la clave foránea.
+  pago            Pago?           @relation("PedidoPago", fields: [id_pago], references: [id_pago], onDelete: SetNull) 
+  
   reserva         Reserva?        @relation("PedidoToReserva") 
   envio           Envio?
   detalles_pedido DetallePedido[]
@@ -107,13 +109,14 @@ model DetallePedido {
 }
 
 model Pago {
-  id_pago       Int         @id @default(autoincrement())
-  nombre_metodo String?     @db.VarChar(100)
-  fecha_pago    DateTime    @default(now())
-  monto         Decimal     @db.Decimal(10, 2)
-  estado        String      @default("Pendiente")
+  id_pago       Int       @id @default(autoincrement())
+  nombre_metodo String?   @db.VarChar(100)
+  fecha_pago    DateTime  @default(now())
+  monto         Decimal   @db.Decimal(10, 2)
+  estado        String    @default("Pendiente")
   
-  pedido Pedido?
+  // ✅ CORRECCIÓN: Quitar onDelete: SetNull. Solo se define la relación.
+  pedido Pedido? @relation("PedidoPago") 
   
   id_metodo Int? 
   metodo_pago Metodo_Pago? @relation(fields: [id_metodo], references: [id_metodo], onDelete: NoAction, onUpdate: NoAction)
@@ -122,21 +125,27 @@ model Pago {
 }
 
 model Reserva {
-  id_reserva         Int              @id @default(autoincrement())
-  id_pedido          Int              @unique
-  cod_trazabilidad   String?          @unique @db.Char(9)
-  fecha_reservada    DateTime?
-  hora_reservada     DateTime?
-  estado_reserva     String           @default("Pendiente")
-  precio_total       Decimal          @db.Decimal(10, 2)
-  region             String?          @db.VarChar(100)
-  comuna             String?          @db.VarChar(100)
-  direccion          String?          @db.VarChar(255)
+  id_reserva          Int       @id @default(autoincrement())
+  id_pedido           Int       @unique
+  cod_trazabilidad    String?   @unique @db.Char(9)
+  fecha_reservada     DateTime?
+  hora_reservada      DateTime?
+  estado_reserva      String    @default("Pendiente")
+  precio_total        Decimal   @db.Decimal(10, 2)
+  region              String?   @db.VarChar(100)
+  comuna              String?   @db.VarChar(100)
+  direccion           String?   @db.VarChar(255)
 
-  pedido             Pedido           @relation("PedidoToReserva", fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
+  // 🔥 1. CAMPO DE CLAVE FORÁNEA PARA LA RELACIÓN CON MASCOTA
+  id_mascota          Int? 
+
+  // 🔥 2. CAMPO DE RELACIÓN OPUESTA (La inversa de 'reservas' en Mascota)
+  mascota             Mascota?  @relation(fields: [id_mascota], references: [id_mascota], onDelete: SetNull)
+
+  pedido              Pedido    @relation("PedidoToReserva", fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
   
-  id_detalle_reserva Int? 
-  detalle_reserva    Detalle_Reserva? @relation("ReservaToDetalle", fields: [id_detalle_reserva], references: [id_detalle_reserva])
+  id_detalle_reserva  Int? 
+  detalle_reserva     Detalle_Reserva? @relation("ReservaToDetalle", fields: [id_detalle_reserva], references: [id_detalle_reserva])
 
   @@map("reserva")
 }
@@ -190,15 +199,17 @@ model Detalle_Reserva {
 }
 
 model Mascota {
-  id_mascota            Int       @id @default(autoincrement())
-  nombre_mascota        String?   @db.VarChar(100)
-  peso                  Decimal?  @db.Decimal(5, 2)
-  edad                  Int?
-  diagnostico_sanitario String?   @db.VarChar(500)
-  notas_manipulacion    String?   @db.VarChar(500)
-  id_especie            Int?
-  id_usuario            Int?
+  id_mascota              Int      @id @default(autoincrement())
+  nombre_mascota          String?  @db.VarChar(100)
+  peso                    Decimal? @db.Decimal(5, 2)
+  edad                    Int?
+  diagnostico_sanitario   String?  @db.VarChar(500)
+  notas_manipulacion      String?  @db.VarChar(500)
+  id_especie              Int?
+  id_usuario              Int?
 
+  reservas Reserva[] 
+  
   usuario Usuario? @relation(fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
   especie Especie? @relation(fields: [id_especie], references: [id_especie], onDelete: NoAction, onUpdate: NoAction)
   
