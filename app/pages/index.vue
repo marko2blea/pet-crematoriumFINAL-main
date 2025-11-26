@@ -20,31 +20,39 @@
       </div>
     </section>
 
-    <section id="servicios" class="py-16" v-if="servicios.length">
+    <section id="servicios" class="py-16 bg-white">
       <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-extrabold text-purple-dark mb-8 text-center">Nuestros Servicios</h2>
+        <h2 class="text-4xl font-extrabold text-purple-dark mb-12 text-center relative z-10 flex items-center justify-center">
+          Nuestros <span class="text-bd-gold-accent ml-2">Servicios</span>
+          <span class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-bd-gold-accent rounded-full"></span>
+        </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           <ClientOnly>
             <div 
               v-for="servicio in servicios" 
               :key="servicio.id" 
-              class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col"
+              class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col border border-gray-200"
             >
               <NuxtLink :to="`/detalle-producto?id=${servicio.id}`" class="block flex flex-col flex-grow">
-                <div class="w-full h-40 bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
-                    :src="servicio.imagen_url || '/logo2.png'" 
+                <div class="w-full h-48 bg-purple-deep flex items-center justify-center overflow-hidden"> 
+                  <img 
+                    :src="servicio.imagen_url || '/logo-placeholder.svg'" 
                     :alt="servicio.nombre" 
-                    class="max-h-full max-w-full object-contain"
-                    @error="servicio.imagen_url = '/logo2.png'"
+                    class="w-full h-full object-contain p-4"
+                    @error="servicio.imagen_url = '/logo-placeholder.svg'"
                   />
                 </div>
+                
                 <div class="p-5 flex flex-col flex-grow">
-                  <span class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start">
+                  <span 
+                    class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start mb-2"
+                    :class="getCategoryClasses(servicio.tipo)"
+                  >
                     {{ servicio.tipo }}
                   </span>
                   <h3 class="text-xl font-bold text-purple-dark my-3 h-12 overflow-hidden">{{ servicio.nombre }}</h3>
-                  <div class="mt-auto">
+                  <div class="mt-auto pt-4 border-t border-gray-100">
                     <span class="text-2xl font-extrabold text-bd-gold-accent block mb-3">
                       ${{ servicio.precio.toLocaleString('es-CL') }}
                     </span>
@@ -62,31 +70,38 @@
       </div>
     </section>
 
-    <section id="productos" class="py-16 bg-gray-100" v-if="productos_filtrados.length">
+    <section id="productos" class="py-16 bg-gray-100">
       <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-extrabold text-purple-dark mb-8 text-center">Urnas y Accesorios</h2>
+        <h2 class="text-4xl font-extrabold text-purple-dark mb-12 text-center relative z-10 flex items-center justify-center">
+          Urnas y <span class="text-bd-gold-accent ml-2">Accesorios</span>
+          <span class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-bd-gold-accent rounded-full"></span>
+        </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           <ClientOnly>
             <div 
               v-for="producto in productos_filtrados" 
               :key="producto.id" 
-              class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 flex flex-col"
+              class="bg-white rounded-xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-[1.02] hover:shadow-2xl flex flex-col border border-gray-200"
             >
               <NuxtLink :to="`/detalle-producto?id=${producto.id}`" class="block flex flex-col flex-grow">
-                <div class="w-full h-40 bg-gray-200 flex items-center justify-center overflow-hidden p-2"> <img 
-                    :src="producto.imagen_url || '/logo2.png'" 
+                <div class="w-full h-48 bg-purple-deep flex items-center justify-center overflow-hidden"> 
+                  <img 
+                    :src="producto.imagen_url || '/logo-placeholder.svg'" 
                     :alt="producto.nombre" 
-                    class="max-h-full max-w-full object-contain"
-                    @error="producto.imagen_url = '/logo2.png'"
+                    class="w-full h-full object-contain p-4"
+                    @error="producto.imagen_url = '/logo-placeholder.svg'"
                   />
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
-                  <span class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start">
+                  <span 
+                    class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm inline-block self-start mb-2"
+                    :class="getCategoryClasses(producto.tipo)"
+                  >
                     {{ producto.tipo }}
                   </span>
                   <h3 class="text-xl font-bold text-purple-dark my-3 h-12 overflow-hidden">{{ producto.nombre }}</h3>
-                  <div class="mt-auto">
+                  <div class="mt-auto pt-4 border-t border-gray-100">
                     <span class="text-2xl font-extrabold text-bd-gold-accent block mb-3">
                       ${{ producto.precio.toLocaleString('es-CL') }}
                     </span>
@@ -148,15 +163,19 @@
 import { computed } from 'vue'; 
 import type { Product } from '../../app/types';
 
-// NOTA IMPORTANTE:
-// Tu interfaz Product en '../../app/types' DEBE incluir:
-// interface Product {
-//   id: number; 
-//   nombre: string;
-//   tipo: string; // <-- Asegúrate que los valores aquí (e.g., 'Servicio', 'Urna') coincidan EXACTAMENTE con tu BD
-//   precio: number;
-//   imagen_url?: string | null; 
-// }
+const getCategoryClasses = (tipo: string) => {
+  switch (tipo.toLowerCase()) {
+    case 'servicio':
+      return 'bg-purple-light text-white'; 
+    case 'urna':
+      return 'bg-bd-gold-accent text-purple-dark';
+    case 'accesorio':
+      return 'bg-gray-300 text-purple-dark';
+    default:
+      return 'bg-gray-200 text-gray-800';
+  }
+}
+
 
 const { data: allProductos } = await useAsyncData<Product[]>('productos-index', () => $fetch('/api/productos'));
 
@@ -186,3 +205,4 @@ const productos_filtrados = computed(() => {
 .text-bd-gold-accent { color:#FFD700; }
 .bg-bd-gold-accent { background-color:#FFC107; }
 </style>
+

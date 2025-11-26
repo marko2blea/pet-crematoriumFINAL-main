@@ -22,17 +22,17 @@
         </button>
       </form>
 
-      <div v-if="loading" class="text-center text-purple-deep">
+            <div v-if="loading" class="text-center text-purple-deep">
         <font-awesome-icon icon="fas fa-spinner" spin class="text-2xl" />
         <p class="mt-2">Cargando estado...</p>
       </div>
       
-      <div v-else-if="error" class="text-center bg-red-100 text-red-700 p-4 rounded-lg border border-red-300">
+            <div v-else-if="error" class="text-center bg-red-100 text-red-700 p-4 rounded-lg border border-red-300">
         <font-awesome-icon icon="fas fa-exclamation-triangle" class="mr-2" />
         <p class="font-semibold">{{ error }}</p>
       </div>
 
-      <div v-else-if="trackingData" class="border border-gray-200 p-6 rounded-lg space-y-4 shadow-md bg-gray-50">
+            <div v-else-if="trackingData" class="border border-gray-200 p-6 rounded-lg space-y-4 shadow-md bg-gray-50">
         <h2 class="text-xl font-bold text-purple-deep border-b pb-2 mb-3">Detalles de Seguimiento</h2>
 
         <div class="flex justify-between items-center pb-2 border-b border-gray-100">
@@ -109,23 +109,44 @@ const formatStatus = (estado: string): string => {
 };
 
 const shouldShowDateTime = (estado: string, fecha: string | null): boolean => {
-  if (estado.toLowerCase().includes('pendiente')) {
+  const lowerEstado = estado.toLowerCase();
+  if (lowerEstado.includes('pendiente') || lowerEstado.includes('procesando') || lowerEstado.includes('esperando')) {
     return false;
   }
-  if (fecha && fecha !== 'N/A') {
+  if (fecha && fecha !== 'N/A' && fecha.length > 5) {
     return true;
   }
   return false;
 };
 
 const formatDisplayDate = (fecha: string | null): string => {
-  if (!fecha || fecha === 'N/A') return 'N/A';
-  
+  if (!fecha || fecha === 'N/A') return 'Pendiente de Asignación por Administrador'; 
+
   try {
     const dateObj = new Date(fecha);
-    return dateObj.toLocaleDateString('es-CL') + ' ' + dateObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+    if (isNaN(dateObj.getTime())) {
+      return 'Fecha no disponible'; 
+    }
+    
+    const dateFormat = dateObj.toLocaleDateString('es-CL', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+    
+    const timeFormat = dateObj.toLocaleTimeString('es-CL', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+
+    return `${dateFormat}, ${timeFormat} hrs`;
+
   } catch (e) {
-    return fecha;
+    console.error("Error al formatear la fecha:", e);
+    return 'Fecha no disponible';
   }
 };
 
@@ -137,7 +158,6 @@ const fetchTrackingData = async (code: string) => {
   trackingData.value = null;
 
   try {
-    // Usamos $fetch (asumiendo que estás en Nuxt)
     const response = await $fetch<TrackingData>(`/api/tracking`, {
       method: 'GET',
       query: { codigo: code },
