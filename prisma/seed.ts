@@ -1,10 +1,29 @@
 // prisma/seed.ts
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const db = new PrismaClient();
 
-// Se eliminó PLACEHOLDER_URL. Usaremos rutas relativas a /public/
+// URLs de imágenes externas proporcionadas por el usuario
+const IMAGE_URLS = {
+    // ------------------- PRODUCTOS Y SERVICIOS -------------------
+    CREMACION_PRESENCIAL: 'https://www.expomedhub.com/img/blog/veterinario-vet.jpg',
+    CREMACION_TRADICIONAL: 'https://papelmatic.com/wp-content/uploads/2025/08/papelmatic-higiene-profesional-limpieza-desinfeccion-clinicas-veterinarias.jpg',
+    EUTANASIA: 'https://www.bupasalud.com/sites/default/files/styles/640_x_400/public/articulos/2024-09/fotos/beneficios%20de%20tener%20una%20mascota-1.jpg?itok=HfGQPxj2',
+    COLLAR_RECUERDO: 'https://www.michy.cl/cdn/shop/files/la-michy-tienda-acero-inoxidable-collar-patitas-dorado-collar-proyeccion-patita-de-recuerdos-41033194504439.webp?v=1701032160&width=800',
+    LLAVERO_CENIZAS: 'https://elcofredelosrecuerdos.com/wp-content/uploads/2025/05/Diseno-sin-titulo-2025-05-15T123748.564.webp',
+    URNA_MARMOL_PREMIUM: 'https://funeza.com/funeza-old/wp-content/uploads/2021/04/18-400x400.jpeg',
+    URNA_MARMOL_NATURAL: 'https://cdn.webshopapp.com/shops/252862/files/241955225/750x750x2/su-6783-urna-de-marmol.jpg',
+    
+    // ------------------- RUTAS RELATIVAS (MANTENIDAS) -------------------
+    INSTALACION_1: '/instalacion1.jpg',
+    INSTALACION_2: '/instalacion2.jpg',
+    INSTALACION_3: '/instalacion3.jpg',
+    MISION: '/mision.jpg',
+    VALORES: '/valores.jpg',
+    HISTORIA: '/historia.jpg',
+};
+
 
 async function main() {
   console.log("🌱 Iniciando seed...");
@@ -35,9 +54,9 @@ async function main() {
   const userPassword2 = await bcrypt.hash("fran1234", 10);
   const userPassword3 = await bcrypt.hash("nico1234", 10);
 
-  const admin = await db.usuario.upsert({
+  await db.usuario.upsert({
     where: { correo: "admin@gmail.com" },
-    update: {},
+    update: { contrase_a: adminPassword, id_rol: rolAdmin.id_rol },
     create: {
       nombre: "Admin",
       apellido_paterno: "Principal",
@@ -48,9 +67,9 @@ async function main() {
     },
   });
 
-  const clienteMarco = await db.usuario.upsert({
+  await db.usuario.upsert({
     where: { correo: "marco.araneda1@virginiogomez.cl" },
-    update: {},
+    update: { contrase_a: userPassword1, id_rol: rolCliente.id_rol },
     create: {
       nombre: "Marco",
       apellido_paterno: "Araneda",
@@ -61,9 +80,9 @@ async function main() {
     },
   });
 
-  const clienteFrancisca = await db.usuario.upsert({
+  await db.usuario.upsert({
     where: { correo: "francisca.gatica2@virginiogomez.cl" },
-    update: {},
+    update: { contrase_a: userPassword2, id_rol: rolCliente.id_rol },
     create: {
       nombre: "Francisca",
       apellido_paterno: "Gatica",
@@ -74,9 +93,9 @@ async function main() {
     },
   });
 
-  const clienteNicolas = await db.usuario.upsert({
+  await db.usuario.upsert({
     where: { correo: "nicolas.quinchavil@virginiogomez.cl" },
-    update: {},
+    update: { contrase_a: userPassword3, id_rol: rolCliente.id_rol },
     create: {
       nombre: "Nicolas",
       apellido_paterno: "Quinchavil",
@@ -105,123 +124,118 @@ async function main() {
   console.log("✔ Proveedor creado");
 
   // =====================================================
-  // 4. PRODUCTOS (Servicios, Urnas y Accesorios) - IMÁGENES CORREGIDAS
+  // 4. PRODUCTOS (Servicios, Urnas y Accesorios) - IMÁGENES CON URL EXTERNA
   // =====================================================
 
-  // ❌ CREMACIÓN SIMPLE ELIMINADA (ID 1)
-  await db.producto.delete({ where: { cod_producto: 1 } }).catch(() => {});
-
-  // 4.1 SERVICIOS BASE
-  const prodTradicional = await db.producto.upsert({
+  // --- 4.1 SERVICIOS BASE ---
+  await db.producto.upsert({
     where: { cod_producto: 4 },
-    update: { imagen_url: '/servicio2.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.CREMACION_TRADICIONAL },
     create: {
       cod_producto: 4,
       nombre_producto: "Cremación Tradicional",
-      precio_unitario: 165000,
+      precio_unitario: new Prisma.Decimal(165000), 
       stock_actual: 999,
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "Servicio de cremación con entrega de cenizas en urna sencilla y certificado.",
-      imagen_url: '/servicio2.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.CREMACION_TRADICIONAL, // URL Externa
     },
   });
 
-  const prodPresencial = await db.producto.upsert({
+  await db.producto.upsert({
     where: { cod_producto: 7 },
-    update: { imagen_url: '/servicio1.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.CREMACION_PRESENCIAL },
     create: {
       cod_producto: 7,
       nombre_producto: "Cremación Presencial",
-      precio_unitario: 250000,
+      precio_unitario: new Prisma.Decimal(250000),
       stock_actual: 999,
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "OPCIÓN PARA PRESENCIAR EL PROCESO EN NUESTRA SALA DE DESPEDIDA",
-      imagen_url: '/servicio1.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.CREMACION_PRESENCIAL, // URL Externa
     },
   });
 
-  const prodEutanasia = await db.producto.upsert({
+  await db.producto.upsert({
     where: { cod_producto: 8 },
-    update: { imagen_url: '/servicio3.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.EUTANASIA },
     create: {
       cod_producto: 8,
       nombre_producto: "Servicio Eutanasia",
-      precio_unitario: 75000,
+      precio_unitario: new Prisma.Decimal(75000),
       stock_actual: 999,
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "REALIZADO POR PERSONAL MÉDICO VETERINARIO CALIFICADO",
-      imagen_url: '/servicio3.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.EUTANASIA, // URL Externa
     },
   });
   
-  // 4.2 URNAS
-  const prodUrnaMadera = await db.producto.upsert({
+  // --- 4.2 URNAS ---
+  await db.producto.upsert({
     where: { cod_producto: 2 },
-    update: { imagen_url: '/urna1.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.URNA_MARMOL_NATURAL, nombre_producto: "Urna de Mármol Natural" },
     create: {
       cod_producto: 2,
-      nombre_producto: "Urna Madera Natural",
-      precio_unitario: 40000,
+      nombre_producto: "Urna de Mármol Natural",
+      precio_unitario: new Prisma.Decimal(40000),
       stock_actual: 20,
       tipo_producto: "Urna",
       id_proveedor: proveedor.id_proveedor,
       disponible: true,
-      descripcion: "Urna simple fabricada en madera nacional.",
-      imagen_url: '/urna1.jpg', // Imagen corregida
+      descripcion: "Urna de mármol con acabado natural, diseño sobrio y elegante.",
+      imagen_url: IMAGE_URLS.URNA_MARMOL_NATURAL, // URL Externa
     },
   });
 
-  // 💥 NUEVA URNA
-  const prodUrnaMarmol = await db.producto.upsert({
+  await db.producto.upsert({
     where: { cod_producto: 5 },
-    update: { imagen_url: '/urna2.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.URNA_MARMOL_PREMIUM },
     create: {
       cod_producto: 5,
       nombre_producto: "Urna de Mármol Premium",
-      precio_unitario: 80000,
+      precio_unitario: new Prisma.Decimal(80000),
       stock_actual: 15,
       tipo_producto: "Urna",
       id_proveedor: proveedor.id_proveedor,
       disponible: true,
       descripcion: "Urna de mármol pulido, elegante y duradera.",
-      imagen_url: '/urna2.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.URNA_MARMOL_PREMIUM, // URL Externa
     },
   });
 
-  // 4.3 ACCESORIOS
-  const prodCollar = await db.producto.upsert({
+  // --- 4.3 ACCESORIOS ---
+  await db.producto.upsert({
     where: { cod_producto: 3 },
-    update: { imagen_url: '/accesorio1.jpg' }, // Imagen corregida
+    update: { imagen_url: IMAGE_URLS.COLLAR_RECUERDO },
     create: {
       cod_producto: 3,
       nombre_producto: "Collar Recuerdo",
-      precio_unitario: 25000,
+      precio_unitario: new Prisma.Decimal(25000),
       stock_actual: 40,
       tipo_producto: "Accesorio",
       id_proveedor: proveedor.id_proveedor,
       disponible: true,
       descripcion: "Collar para almacenar parte de las cenizas.",
-      imagen_url: '/accesorio1.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.COLLAR_RECUERDO, // URL Externa
     },
   });
 
-  // 💥 NUEVO ACCESORIO
-  const prodLlavero = await db.producto.upsert({
+  await db.producto.upsert({
     where: { cod_producto: 6 },
-    update: { imagen_url: '/accesorio2.jpg' }, // Imagen corregida (usando /accesorio2.jpg como placeholder)
+    update: { imagen_url: IMAGE_URLS.LLAVERO_CENIZAS },
     create: {
       cod_producto: 6,
       nombre_producto: "Llavero Cenizas Huella",
-      precio_unitario: 35000,
+      precio_unitario: new Prisma.Decimal(35000),
       stock_actual: 30,
       tipo_producto: "Accesorio",
       id_proveedor: proveedor.id_proveedor,
       disponible: true,
       descripcion: "Llavero con forma de huella para llevar un recuerdo de tu mascota.",
-      imagen_url: '/accesorio2.jpg', // Imagen corregida
+      imagen_url: IMAGE_URLS.LLAVERO_CENIZAS, // URL Externa
     },
   });
 
@@ -230,7 +244,7 @@ async function main() {
   // =====================================================
   // 5. ESPECIES
   // =====================================================
-  const especiePerro = await db.especie.upsert({
+  await db.especie.upsert({
     where: { id_especie: 1 },
     update: {},
     create: { id_especie: 1, nombre_especie: "Perro" },
@@ -253,7 +267,7 @@ async function main() {
   // =====================================================
   // 6. MÉTODOS DE PAGO
   // =====================================================
-  const metodoTarjeta = await db.metodo_Pago.upsert({
+  await db.metodo_Pago.upsert({
     where: { id_metodo: 1 },
     update: {},
     create: { id_metodo: 1, nombre_metodo: "Tarjeta de Crédito" },
@@ -274,7 +288,7 @@ async function main() {
   console.log("✔ Métodos de pago listos");
 
   // =====================================================
-  // 7. INSTALACIONES - IMÁGENES CORREGIDAS
+  // 7. INSTALACIONES - RUTAS RELATIVAS MANTENIDAS
   // =====================================================
   await db.instalacion.deleteMany({});
   await db.instalacion.createMany({
@@ -283,19 +297,19 @@ async function main() {
         title: "Sala de Despedida",
         body: "Un espacio tranquilo para acompañar a tus mascotas en su despedida.",
         features: ["Aromaterapia", "Iluminación cálida", "Sillas cómodas"],
-        imagen_url: '/instalacion1.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.INSTALACION_1,
       },
       {
         title: "Horno Crematorio",
         body: "Equipo certificado de última generación, seguro y eficiente.",
         features: ["Certificado SEC", "Alta eficiencia térmica", "Proceso controlado"],
-        imagen_url: '/instalacion2.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.INSTALACION_2,
       },
       {
         title: "Jardín del Recuerdo",
         body: "Un espacio exterior para reflexionar y despedirse.",
         features: ["Árboles nativos", "Bancas", "Zona de descanso"],
-        imagen_url: '/instalacion3.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.INSTALACION_3,
       },
     ],
   });
@@ -326,7 +340,7 @@ async function main() {
   console.log("✔ Memorial creado (2 ejemplos)");
 
   // =====================================================
-  // 9. ABOUT BLOCK - IMÁGENES CORREGIDAS
+  // 9. ABOUT BLOCK - RUTAS RELATIVAS MANTENIDAS
   // =====================================================
   await db.aboutBlock.deleteMany({});
   await db.aboutBlock.createMany({
@@ -335,19 +349,19 @@ async function main() {
         title: "Nuestra Misión",
         body: "Brindar un servicio digno, respetuoso y profesional para despedir a las mascotas que forman parte de nuestras familias.",
         items: ["Acompañamiento", "Respeto", "Profesionalismo"],
-        imagen_url: '/mision.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.MISION,
       },
       {
         title: "Nuestros Valores",
         body: "Trabajamos con transparencia, empatía y dedicación para entregar tranquilidad en momentos difíciles.",
         items: ["Transparencia", "Empatía", "Dedicación"],
-        imagen_url: '/valores.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.VALORES,
       },
       {
         title: "Nuestra Historia",
         body: "Más de diez años entregando un servicio humano y comprometido con cada familia.",
         items: ["Fundado en 2013", "Cientos de familias acompañadas", "Crecimiento constante"],
-        imagen_url: '/historia.jpg', // Imagen corregida
+        imagen_url: IMAGE_URLS.HISTORIA,
       },
     ],
   });
@@ -357,9 +371,7 @@ async function main() {
   // =====================================================
   // 10. RESERVA / PEDIDO DE EJEMPLO
   // =====================================================
-  // 🔥 NOTA IMPORTANTE: Esta sección de reserva de ejemplo ha sido ELIMINADA 
-  // para cumplir con tu solicitud de quitar el ejemplo que no funciona.
-  
+  console.log("Se omitió la creación de la Reserva/Pedido de ejemplo.");
 
   console.log("🌱 Seed COMPLETADO");
 }
