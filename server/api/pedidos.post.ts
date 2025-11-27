@@ -2,6 +2,22 @@
 import { db } from '../utils/prisma';
 import { defineEventHandler, readBody, createError } from 'h3';
 
+// ------------------------------------
+// UTIL: Generar Código de Trazabilidad (9 chars)
+// ------------------------------------
+function generarCodTrazabilidad(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 9; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// ------------------------------------
+// DEFINICIÓN DE INTERFACES
+// ------------------------------------
+
 interface Direccion {
   tipo_entrega: 'DOMICILIO' | 'SUCURSAL';
   region?: string;
@@ -10,7 +26,7 @@ interface Direccion {
 }
 
 interface CartItem {
-  id: string; // Codigo del Producto/Servicio
+  id: string; // Código del Producto/Servicio
   nombre: string;
   precio: number;
   quantity: number;
@@ -28,6 +44,10 @@ interface PedidoBody {
   metodo_pago: string;
 }
 
+// ------------------------------------
+// HANDLER
+// ------------------------------------
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<PedidoBody>(event);
@@ -44,6 +64,7 @@ export default defineEventHandler(async (event) => {
     const itemsProductos = cart.filter((i) => i.tipo !== 'Servicio');
     const servicio = cart.find((i) => i.tipo === 'Servicio');
 
+    // Total base = suma de todos los ítems (productos + servicio si hay)
     let totalBase = cart.reduce((sum, item) => sum + item.precio * item.quantity, 0);
     const costoAdicional = cart[0]?.costo_adicional || 0;
     const totalGeneralString = String(totalBase + costoAdicional);
@@ -52,12 +73,14 @@ export default defineEventHandler(async (event) => {
     const esEnvioDomicilio = !servicio && logistica?.tipo_entrega === 'DOMICILIO';
     const estadoInicial = 'Pendiente';
 
+    // Detalles de productos (para DetallePedido)
     const detallesProducto = itemsProductos.map((p) => ({
-      cod_producto: Number(p.id), // 🔥 asegurar Int
+      cod_producto: Number(p.id), // asegurar INT
       cantidad: p.quantity,
       precio_unitario: String(p.precio),
     }));
 
+    // Mascota (solo si hay servicio con datos de mascota)
     let mascotaCreationPromise: Promise<any> | null = null;
     if (servicio && servicio.petName) {
       mascotaCreationPromise = db.mascota.create({
@@ -70,11 +93,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // --- TRANSACCIÓN ---
     const results = await db.$transaction(async (tx) => {
       let idDetalleReserva: number | undefined = undefined;
 
       if (mascotaCreationPromise) await mascotaCreationPromise;
 
+      // 1. Crear Detalle_Reserva solo si hay Servicio
       if (servicio) {
         const detalleReserva = await tx.detalle_Reserva.create({
           data: {
@@ -88,6 +113,7 @@ export default defineEventHandler(async (event) => {
         idDetalleReserva = detalleReserva.id_detalle_reserva;
       }
 
+      // 2. Crear el Pago
       const pago = await tx.pago.create({
         data: {
           nombre_metodo: metodo_pago,
@@ -96,6 +122,7 @@ export default defineEventHandler(async (event) => {
         },
       });
 
+      // 3. Crear el Pedido + Detalles + Reserva (siempre) + Envío (si aplica)
       const pedido = await tx.pedido.create({
         data: {
           id_usuario,
@@ -103,19 +130,24 @@ export default defineEventHandler(async (event) => {
           precio_total: totalGeneralString,
           estado_pedido: estadoInicial,
           es_reserva: !!servicio,
+
+          // Detalles de productos
           detalles_pedido: { create: detallesProducto as any },
-          reserva: servicio
-            ? {
-                create: {
-                  precio_total: totalGeneralString,
-                  estado_reserva: estadoInicial,
-                  region: logistica?.region,
-                  comuna: logistica?.comuna,
-                  direccion: logistica?.direccion,
-                  id_detalle_reserva: idDetalleReserva,
-                },
-              }
-            : undefined,
+
+          // 🔥 SIEMPRE crear una RESERVA asociada, incluso si es solo productos
+          reserva: {
+            create: {
+              precio_total: totalGeneralString,
+              estado_reserva: estadoInicial,
+              region: logistica?.region,
+              comuna: logistica?.comuna,
+              direccion: logistica?.direccion,
+              id_detalle_reserva: idDetalleReserva, // si no hay servicio → queda null
+              cod_trazabilidad: generarCodTrazabilidad(), // 🔥 para todos
+            },
+          },
+
+          // Envío (solo si es envío a domicilio y NO es servicio)
           envio:
             esEnvioDomicilio && logistica
               ? {
@@ -142,7 +174,7 @@ export default defineEventHandler(async (event) => {
       statusCode: 201,
       message: 'Pedido creado correctamente',
       id_pedido: pedido.id_pedido,
-      id_reserva: pedido.reserva?.id_reserva ?? null,             // 🔥 para redirigir a edición
+      id_reserva: pedido.reserva?.id_reserva ?? null,
       cod_trazabilidad: pedido.reserva?.cod_trazabilidad || null,
     };
   } catch (error) {

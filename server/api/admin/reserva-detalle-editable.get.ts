@@ -7,62 +7,40 @@ export default defineEventHandler(async (event) => {
   const idParam = query.id as string;
 
   if (!idParam) {
-    throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva.' });
+    throw createError({ statusCode: 400, statusMessage: 'Falta el ID del pedido.' });
   }
 
-  const idReserva = parseInt(idParam);
-  if (isNaN(idReserva) || idReserva < 1) {
-    throw createError({ statusCode: 400, statusMessage: 'ID de reserva inválido.' });
+  const idPedido = parseInt(idParam);
+  if (isNaN(idPedido) || idPedido < 1) {
+    throw createError({ statusCode: 400, statusMessage: 'ID de pedido inválido.' });
   }
 
   try {
-    const reservaDetalle = await db.reserva.findUnique({
-      where: { id_reserva: idReserva },
+    const pedido = await db.pedido.findUnique({
+      where: { id_pedido: idPedido },
       include: {
-        pedido: {
+        usuario: true,
+        envio: true,
+        detalles_pedido: {
+          include: { producto: true },
+        },
+        reserva: {
           include: {
-            usuario: true,
-            envio: true,
-            detalles_pedido: { include: { producto: true } },
+            detalle_reserva: true,
+            mascota: true,
           },
         },
-        detalle_reserva: true,
-        mascota: true,
       },
     });
 
-    if (!reservaDetalle) {
-      throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada.' });
+    if (!pedido) {
+      throw createError({ statusCode: 404, statusMessage: 'Pedido no encontrado.' });
     }
 
-    if (!reservaDetalle.pedido) {
-      console.error(
-        `ERROR: Reserva #${idReserva} encontrada, pero el id_pedido está roto o es nulo.`
-      );
-      throw createError({
-        statusCode: 404,
-        statusMessage: `Reserva #${idReserva} encontrada, pero el pedido asociado es nulo.`,
-      });
-    }
+    const reserva = pedido.reserva || null;
+    const esReserva = !!pedido.es_reserva; // 🔥 CLAVE: usamos el flag que guardamos al crear el pedido
 
-    // MASCOTA
-    let mascotaData = null;
-    if (reservaDetalle.mascota) {
-      mascotaData = {
-        nombre: reservaDetalle.mascota.nombre_mascota || 'N/A',
-        peso: reservaDetalle.mascota.peso
-          ? reservaDetalle.mascota.peso.toNumber()
-          : null,
-        edad: reservaDetalle.mascota.edad ?? null,
-      };
-    }
-
-    // SERVICIO PRINCIPAL (detalle_reserva)
-    const detalleServicio = reservaDetalle.detalle_reserva;
-    const nombreServicio = detalleServicio?.nombre_servicio || 'N/A';
-    const tipoServicio = detalleServicio?.tipo_servicio || null;
-
-    // PRODUCTOS ADICIONALES (solo productos, no el servicio)
+    // ---------- PRODUCTOS COMPRADOS ----------
     const productosComprados: {
       nombre: string;
       cantidad: number;
@@ -70,7 +48,7 @@ export default defineEventHandler(async (event) => {
       tipo: string;
     }[] = [];
 
-    reservaDetalle.pedido.detalles_pedido.forEach((detalle) => {
+    pedido.detalles_pedido.forEach((detalle) => {
       if (detalle.producto) {
         productosComprados.push({
           nombre: detalle.producto.nombre_producto || 'Ítem Desconocido',
@@ -83,36 +61,83 @@ export default defineEventHandler(async (event) => {
       }
     });
 
-    // FECHAS
-    const fechaReservadaISO =
-      reservaDetalle.fecha_reservada?.toISOString().split('T')[0] || '';
-
+    // ---------- CAMPOS SEGÚN SI ES RESERVA (SERVICIO) O SOLO PRODUCTO ----------
+    let id_reserva: number | null = null;
+    let cod_trazabilidad: string | null = null;
+    let estado_reserva = '';
+    let fechaReservadaISO = '';
     let horaReservadaISO = '';
-    if (reservaDetalle.hora_reservada) {
-      const hours = reservaDetalle.hora_reservada
-        .getUTCHours()
-        .toString()
-        .padStart(2, '0');
-      const minutes = reservaDetalle.hora_reservada
-        .getUTCMinutes()
-        .toString()
-        .padStart(2, '0');
-      horaReservadaISO = `${hours}:${minutes}`;
+    let mascotaData: { nombre: string; peso: number | null; edad: number | null } | null =
+      null;
+    let nombreServicio: string | undefined = undefined;
+    let tipoServicio: string | undefined = undefined;
+
+    if (esReserva && reserva) {
+      // ----- CASO: SERVICIO -----
+      id_reserva = reserva.id_reserva;
+      cod_trazabilidad = reserva.cod_trazabilidad || null;
+      estado_reserva = reserva.estado_reserva;
+
+      if (reserva.fecha_reservada) {
+        fechaReservadaISO = reserva.fecha_reservada.toISOString().split('T')[0];
+      }
+
+      if (reserva.hora_reservada) {
+        const hours = reserva.hora_reservada
+          .getUTCHours()
+          .toString()
+          .padStart(2, '0');
+        const minutes = reserva.hora_reservada
+          .getUTCMinutes()
+          .toString()
+          .padStart(2, '0');
+        horaReservadaISO = `${hours}:${minutes}`;
+      }
+
+      if (reserva.mascota) {
+        mascotaData = {
+          nombre: reserva.mascota.nombre_mascota || 'N/A',
+          peso: reserva.mascota.peso ? reserva.mascota.peso.toNumber() : null,
+          edad: reserva.mascota.edad ?? null,
+        };
+      }
+
+      if (reserva.detalle_reserva) {
+        nombreServicio = reserva.detalle_reserva.nombre_servicio || 'Servicio Principal';
+        tipoServicio = reserva.detalle_reserva.tipo_servicio || undefined;
+      }
+    } else {
+      // ----- CASO: SOLO PRODUCTOS -----
+      id_reserva = reserva ? reserva.id_reserva : null;
+      cod_trazabilidad = reserva?.cod_trazabilidad || null;
+      estado_reserva = pedido.estado_pedido; // usamos el estado del pedido como "estado_reserva"
+      fechaReservadaISO = '';
+      horaReservadaISO = '';
+      mascotaData = null;
+      nombreServicio = undefined;
+      tipoServicio = undefined;
     }
 
-    const envio = reservaDetalle.pedido.envio;
-    const esEnvio = !!envio;
+    // ---------- DIRECCIÓN ----------
+    const envio = pedido.envio;
+    const region = envio ? envio.region_envio : reserva?.region || '';
+    const comuna = envio ? envio.comuna_envio : reserva?.comuna || '';
+    const direccion = envio ? envio.direccion_envio : reserva?.direccion || '';
 
-    const precioTotalNumerico = reservaDetalle.pedido.precio_total
-      ? reservaDetalle.pedido.precio_total.toNumber()
+    const precioTotalNumerico = pedido.precio_total
+      ? pedido.precio_total.toNumber()
       : 0;
 
-    const usuario = reservaDetalle.pedido.usuario;
+    const usuario = pedido.usuario;
 
+    // ---------- RESPUESTA FINAL ----------
     return {
-      id_reserva: reservaDetalle.id_reserva,
-      cod_trazabilidad: reservaDetalle.cod_trazabilidad,
-      estado_reserva: reservaDetalle.estado_reserva,
+      id_pedido: pedido.id_pedido,
+      id_reserva,
+      es_reserva: esReserva, // 🔥 ESTO es lo que usa el front para saber si mostrar fecha/hora
+
+      cod_trazabilidad,
+      estado_reserva,
       fecha_reservada: fechaReservadaISO,
       hora_reservada: horaReservadaISO,
       precio_total: precioTotalNumerico,
@@ -120,30 +145,27 @@ export default defineEventHandler(async (event) => {
       nombre_cliente: usuario?.nombre || 'Desconocido',
       correo_cliente: usuario?.correo || 'N/A',
 
-      region: esEnvio ? envio!.region_envio : reservaDetalle.region || '',
-      comuna: esEnvio ? envio!.comuna_envio : reservaDetalle.comuna || '',
-      direccion: esEnvio ? envio!.direccion_envio : reservaDetalle.direccion || '',
+      region,
+      comuna,
+      direccion,
 
       mascota_datos: mascotaData,
 
-      // 🔥 para el bloque "Servicio Reservado"
       nombre_servicio: nombreServicio,
       tipo_servicio: tipoServicio,
 
-      // 🔥 para el bloque "Productos Adicionales Comprados"
       productos_comprados: productosComprados,
     };
   } catch (error: any) {
-    console.error('Error al obtener detalle de reserva (CRITICO):', error);
+    console.error('Error al obtener detalle de reserva/pedido (CRITICO):', error);
 
     if (error.statusCode) {
-      // ya es un createError (404, 400, etc.)
       throw error;
     }
 
     throw createError({
       statusCode: 500,
-      statusMessage: `Error interno al cargar la reserva: ${
+      statusMessage: `Error interno al cargar la reserva/pedido: ${
         error.message || 'Error desconocido'
       }.`,
     });
