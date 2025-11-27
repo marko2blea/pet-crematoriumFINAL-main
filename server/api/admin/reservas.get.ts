@@ -1,7 +1,7 @@
 // server/api/admin/reservas.get.ts
 import { db } from '../../utils/prisma';
 import { defineEventHandler, getQuery, createError } from 'h3';
-import { Prisma } from '@prisma/client'; 
+import { Prisma } from '@prisma/client';
 
 const ITEMS_PER_PAGE = 15;
 
@@ -23,16 +23,15 @@ export default defineEventHandler(async (event) => {
         where,
         skip,
         take: ITEMS_PER_PAGE,
-        orderBy: { fecha_pedido: 'desc' },
+        orderBy: {
+          fecha_pedido: 'desc',
+        },
         include: {
-          usuario: {
-            include: {
-              mascotas: true,
-            },
-          },
+          usuario: true,
           reserva: {
             include: {
               detalle_reserva: true,
+              mascota: true, // 🔥 AQUÍ
             },
           },
           pago: true,
@@ -52,12 +51,15 @@ export default defineEventHandler(async (event) => {
         (d) => d.producto && d.producto.tipo_producto === 'Servicio'
       );
 
-      let petName: string = 'N/A';
+      // 🔥 Mascota por reserva, NO por usuario
+      let petName: string;
 
       if (!p.es_reserva) {
         petName = 'No Aplica';
-      } else if (p.usuario?.mascotas && p.usuario.mascotas.length > 0) {
-        petName = p.usuario.mascotas[0].nombre_mascota || 'N/A';
+      } else if (p.reserva?.mascota) {
+        petName = p.reserva.mascota.nombre_mascota || 'N/A';
+      } else {
+        petName = 'Sin mascota asignada';
       }
 
       return {
@@ -65,7 +67,8 @@ export default defineEventHandler(async (event) => {
         id_usuario: p.id_usuario,
         fecha: p.fecha_pedido,
         cliente: p.usuario
-          ? `${p.usuario.nombre} ${p.usuario.apellido_paterno}`
+          ? `${p.usuario.nombre || ''} ${p.usuario.apellido_paterno || ''}`.trim() ||
+            'N/A'
           : 'N/A',
         correo: p.usuario?.correo || 'N/A',
         petName,
@@ -78,7 +81,7 @@ export default defineEventHandler(async (event) => {
           'N/A',
         monto: Number(p.pago?.monto) || Number(p.precio_total) || 0,
         estadoPedido: p.estado_pedido,
-        es_reserva: !!p.es_reserva, // 🔥 CLAVE PARA SEPARAR EN EL FRONT
+        es_reserva: !!p.es_reserva,
       };
     });
 

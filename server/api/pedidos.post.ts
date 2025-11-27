@@ -26,7 +26,7 @@ interface Direccion {
 }
 
 interface CartItem {
-  id: string; // Código del Producto/Servicio
+  id: string; // Codigo del Producto/Servicio
   nombre: string;
   precio: number;
   quantity: number;
@@ -80,26 +80,26 @@ export default defineEventHandler(async (event) => {
       precio_unitario: String(p.precio),
     }));
 
-    // Mascota (solo si hay servicio con datos de mascota)
-    let mascotaCreationPromise: Promise<any> | null = null;
-    if (servicio && servicio.petName) {
-      mascotaCreationPromise = db.mascota.create({
-        data: {
-          nombre_mascota: servicio.petName,
-          peso: servicio.petWeight !== undefined ? servicio.petWeight : undefined,
-          edad: servicio.petAge !== undefined ? servicio.petAge : undefined,
-          id_usuario: id_usuario,
-        },
-      });
-    }
-
     // --- TRANSACCIÓN ---
-    const results = await db.$transaction(async (tx) => {
+    const pedido = await db.$transaction(async (tx) => {
       let idDetalleReserva: number | undefined = undefined;
+      let mascotaId: number | undefined = undefined;
 
-      if (mascotaCreationPromise) await mascotaCreationPromise;
+      // 1. Crear Mascota si hay servicio con datos de mascota
+      if (servicio && servicio.petName) {
+        const nuevaMascota = await tx.mascota.create({
+          data: {
+            nombre_mascota: servicio.petName,
+            peso:
+              servicio.petWeight !== undefined ? servicio.petWeight : undefined,
+            edad: servicio.petAge !== undefined ? servicio.petAge : undefined,
+            id_usuario: id_usuario,
+          },
+        });
+        mascotaId = nuevaMascota.id_mascota;
+      }
 
-      // 1. Crear Detalle_Reserva solo si hay Servicio
+      // 2. Crear Detalle_Reserva si hay Servicio
       if (servicio) {
         const detalleReserva = await tx.detalle_Reserva.create({
           data: {
@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
         idDetalleReserva = detalleReserva.id_detalle_reserva;
       }
 
-      // 2. Crear el Pago
+      // 3. Crear el Pago
       const pago = await tx.pago.create({
         data: {
           nombre_metodo: metodo_pago,
@@ -122,8 +122,8 @@ export default defineEventHandler(async (event) => {
         },
       });
 
-      // 3. Crear el Pedido + Detalles + Reserva (siempre) + Envío (si aplica)
-      const pedido = await tx.pedido.create({
+      // 4. Crear el Pedido + Detalles + Reserva + Envío (si aplica)
+      const nuevoPedido = await tx.pedido.create({
         data: {
           id_usuario,
           id_pago: pago.id_pago,
@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
           // Detalles de productos
           detalles_pedido: { create: detallesProducto as any },
 
-          // 🔥 SIEMPRE crear una RESERVA asociada, incluso si es solo productos
+          // SIEMPRE crear una RESERVA asociada, incluso si es solo productos
           reserva: {
             create: {
               precio_total: totalGeneralString,
@@ -142,8 +142,9 @@ export default defineEventHandler(async (event) => {
               region: logistica?.region,
               comuna: logistica?.comuna,
               direccion: logistica?.direccion,
-              id_detalle_reserva: idDetalleReserva, // si no hay servicio → queda null
-              cod_trazabilidad: generarCodTrazabilidad(), // 🔥 para todos
+              id_detalle_reserva: idDetalleReserva ?? null,
+              cod_trazabilidad: generarCodTrazabilidad(),
+              id_mascota: mascotaId ?? null, // 🔥 AQUÍ asociamos la mascota a la reserva
             },
           },
 
@@ -165,10 +166,8 @@ export default defineEventHandler(async (event) => {
         },
       });
 
-      return pedido;
+      return nuevoPedido;
     });
-
-    const pedido = results;
 
     return {
       statusCode: 201,

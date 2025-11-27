@@ -67,7 +67,7 @@
       <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-2xl">
         <h3 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
           <font-awesome-icon icon="fas fa-bell" class="mr-2 text-purple-deep" />
-          Actividad Reciente (Pendientes de Pago)
+          Actividad Reciente
         </h3>
 
         <div v-if="pendingActivity" class="text-center py-10 text-gray-500">
@@ -87,8 +87,8 @@
             icon="fas fa-check-circle"
             class="text-4xl text-green-500 mb-3"
           />
-          <p class="font-semibold">¡Todo al día!</p>
-          <p>No hay reservas pendientes de pago.</p>
+          <p class="font-semibold">Sin registros aún</p>
+          <p>No hay reservas registradas todavía.</p>
         </div>
         <div v-else class="space-y-4">
           <NuxtLink
@@ -204,7 +204,7 @@
           <!-- SOLO PRODUCTOS -->
           <div>
             <h2 class="text-lg font-bold text-dark-primary-blue mb-3">
-              Pedidos
+              Pedidos Solo Productos
             </h2>
             <div class="border rounded-lg overflow-hidden">
               <table
@@ -216,17 +216,12 @@
                     <th
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
                     >
-                      ID Pedido
+                      Cód. Trazabilidad
                     </th>
                     <th
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
                     >
                       Cliente
-                    </th>
-                    <th
-                      class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
-                    >
-                      Cód. Trazabilidad
                     </th>
                     <th
                       class="px-4 py-2 text-center text-xs font-bold uppercase tracking-wider"
@@ -252,19 +247,14 @@
                     class="hover:bg-purple-card transition duration-150"
                   >
                     <td
-                      class="px-4 py-3 whitespace-nowrap text-sm font-medium text-dark-primary-blue"
+                      class="px-4 py-3 whitespace-nowrap text-sm font-mono text-purple-deep"
                     >
-                      {{ reserva.id_pedido }}
+                      {{ reserva.cod_trazabilidad }}
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                       <p class="text-sm font-semibold text-purple-dark">
                         {{ reserva.cliente }}
                       </p>
-                    </td>
-                    <td
-                      class="px-4 py-3 whitespace-nowrap text-sm font-mono text-purple-deep"
-                    >
-                      {{ reserva.cod_trazabilidad }}
                     </td>
                     <td
                       class="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-700"
@@ -296,7 +286,7 @@
                 </tbody>
               </table>
               <div v-else class="text-center py-6 text-gray-500 text-sm">
-                No hay pedidos de productos con este filtro.
+                No hay pedidos solo productos con este filtro.
               </div>
             </div>
           </div>
@@ -316,7 +306,7 @@
                     <th
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
                     >
-                      ID Pedido
+                      Cód. Trazabilidad
                     </th>
                     <th
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
@@ -327,11 +317,6 @@
                       class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
                     >
                       Mascota
-                    </th>
-                    <th
-                      class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider"
-                    >
-                      Cód. Trazabilidad
                     </th>
                     <th
                       class="px-4 py-2 text-center text-xs font-bold uppercase tracking-wider"
@@ -357,9 +342,9 @@
                     class="hover:bg-purple-card transition duration-150"
                   >
                     <td
-                      class="px-4 py-3 whitespace-nowrap text-sm font-medium text-dark-primary-blue"
+                      class="px-4 py-3 whitespace-nowrap text-sm font-mono text-purple-deep"
                     >
-                      {{ reserva.id_pedido }}
+                      {{ reserva.cod_trazabilidad }}
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                       <p class="text-sm font-semibold text-purple-dark">
@@ -370,11 +355,6 @@
                       class="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
                     >
                       {{ reserva.petName || 'N/A' }}
-                    </td>
-                    <td
-                      class="px-4 py-3 whitespace-nowrap text-sm font-mono text-purple-deep"
-                    >
-                      {{ reserva.cod_trazabilidad }}
                     </td>
                     <td
                       class="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-700"
@@ -460,7 +440,7 @@ definePageMeta({
 
 const router = useRouter();
 
-// Lógica de eliminación (sin cambios)
+// Lógica de eliminación (igual que antes)
 const deletingIds = ref<Set<number>>(new Set());
 const isDeleting = (id: number) => deletingIds.value.has(id);
 
@@ -547,7 +527,7 @@ interface Reserva {
   estadoReserva: string;
   monto: number;
   petName?: string;
-  es_reserva: boolean; // 🔥 nuevo
+  es_reserva: boolean;
 }
 
 const apiUrl = '/api/admin/reservas';
@@ -570,7 +550,7 @@ const {
 
 const reservations = computed(() => responseData.value?.pedidos || []);
 
-// 🔥 Separar en dos grupos
+// separar en dos grupos
 const reservasSoloProductos = computed(() =>
   reservations.value.filter((r) => !r.es_reserva)
 );

@@ -21,7 +21,7 @@ const IMAGE_URLS = {
     INSTALACION_3: 'https://assets.diarioconcepcion.cl/2024/04/pag-8-9-cemeterio-de-mascotas-parque-tumbes-foto-facebok-parque-tumbes-thno-copia-1-e1712711970843.jpg',
     MISION: 'https://arcadenoe.com.gt/cdn/shop/articles/unnamed_3001a694-99b3-4997-be50-40db2a16aedc_1980x.jpg?v=1590523057',
     VALORES: 'https://www.webconsultas.com/sites/default/files/styles/wch_image_schema/public/media/0d/temas/elegir_buen_veterinario_p.jpg',
-    HISTORIA: 'https://assets.diarioconcepcion.cl/2024/04/pag-8-9-cemeterio-de-mascotas-parque-tumbes-foto-facebok-parque-tumbes-thno-copia-1-e1712711970843.jpg',
+    HISTORIA: 'https://www.hola.com/horizon/landscape/889bb47c9ca6-comportamiento-mascota-familiar-t.jpg',
 };
 
 
@@ -75,7 +75,7 @@ async function main() {
       apellido_paterno: "Araneda",
       correo: "marco.araneda1@virginiogomez.cl",
       contrase_a: userPassword1,
-      id_rol: rolCliente.id_rol,
+      id_rol: rolAdmin.id_rol,
       fecha_registro: new Date(),
     },
   });
@@ -88,7 +88,7 @@ async function main() {
       apellido_paterno: "Gatica",
       correo: "francisca.gatica2@virginiogomez.cl",
       contrase_a: userPassword2,
-      id_rol: rolCliente.id_rol,
+      id_rol: rolAdmin.id_rol,
       fecha_registro: new Date(),
     },
   });
@@ -101,7 +101,7 @@ async function main() {
       apellido_paterno: "Quinchavil",
       correo: "nicolas.quinchavil@virginiogomez.cl",
       contrase_a: userPassword3,
-      id_rol: rolCliente.id_rol,
+      id_rol: rolAdmin.id_rol,
       fecha_registro: new Date(),
     },
   });
@@ -139,7 +139,7 @@ async function main() {
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "Servicio de cremación con entrega de cenizas en urna sencilla y certificado.",
-      imagen_url: IMAGE_URLS.CREMACION_TRADICIONAL, // URL Externa
+      imagen_url: IMAGE_URLS.CREMACION_TRADICIONAL,
     },
   });
 
@@ -154,7 +154,7 @@ async function main() {
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "OPCIÓN PARA PRESENCIAR EL PROCESO EN NUESTRA SALA DE DESPEDIDA",
-      imagen_url: IMAGE_URLS.CREMACION_PRESENCIAL, // URL Externa
+      imagen_url: IMAGE_URLS.CREMACION_PRESENCIAL,
     },
   });
 
@@ -169,7 +169,7 @@ async function main() {
       tipo_producto: "Servicio",
       disponible: true,
       descripcion: "REALIZADO POR PERSONAL MÉDICO VETERINARIO CALIFICADO",
-      imagen_url: IMAGE_URLS.EUTANASIA, // URL Externa
+      imagen_url: IMAGE_URLS.EUTANASIA,
     },
   });
   
@@ -259,7 +259,7 @@ async function main() {
   await db.especie.upsert({
     where: { id_especie: 3 },
     update: {},
-    create: { id_especie: 3, nombre_especie: "Ave" },
+    create: { id_especie: 3, nombre_especie: "Conejo" },
   });
 
   console.log("✔ Especies creadas");
@@ -360,7 +360,7 @@ async function main() {
       {
         title: "Nuestra Historia",
         body: "Más de diez años entregando un servicio humano y comprometido con cada familia.",
-        items: ["Fundado en 2013", "Cientos de familias acompañadas", "Crecimiento constante"],
+        items: ["Fundado en 2025", "Cientos de familias acompañadas", "Crecimiento constante"],
         imagen_url: IMAGE_URLS.HISTORIA,
       },
     ],

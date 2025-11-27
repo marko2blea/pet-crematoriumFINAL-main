@@ -7,7 +7,7 @@
         <div class="flex-shrink-0">
           <NuxtLink to="/" class="flex items-center p-2 rounded-lg transition">
           <img src="/logo.png" alt="Crematorio San Antonio Logo" class="h-10 mr-2">
-          <img src="/sanantonio.png" alt="Crematorio San Antonio Logo" class="h-10 font-bold text-purple-deep">
+          <img src="/newlogo.png" alt="Crematorio San Antonio Logo" class="h-12 font-bold text-purple-deep">
          </NuxtLink>
         </div>
 
