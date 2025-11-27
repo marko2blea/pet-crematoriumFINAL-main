@@ -16,12 +16,12 @@ const IMAGE_URLS = {
     URNA_MARMOL_NATURAL: 'https://cdn.webshopapp.com/shops/252862/files/241955225/750x750x2/su-6783-urna-de-marmol.jpg',
     
     // ------------------- RUTAS RELATIVAS (MANTENIDAS) -------------------
-    INSTALACION_1: '/instalacion1.jpg',
-    INSTALACION_2: '/instalacion2.jpg',
-    INSTALACION_3: '/instalacion3.jpg',
-    MISION: '/mision.jpg',
-    VALORES: '/valores.jpg',
-    HISTORIA: '/historia.jpg',
+    INSTALACION_1: 'https://cremaguada.com/wp-content/uploads/2023/11/cremaguada5.jpg',
+    INSTALACION_2: 'https://tanatosformacion.com/wp-content/uploads/2021/07/horno-crematorio-scaled.jpg',
+    INSTALACION_3: 'https://assets.diarioconcepcion.cl/2024/04/pag-8-9-cemeterio-de-mascotas-parque-tumbes-foto-facebok-parque-tumbes-thno-copia-1-e1712711970843.jpg',
+    MISION: 'https://arcadenoe.com.gt/cdn/shop/articles/unnamed_3001a694-99b3-4997-be50-40db2a16aedc_1980x.jpg?v=1590523057',
+    VALORES: 'https://www.webconsultas.com/sites/default/files/styles/wch_image_schema/public/media/0d/temas/elegir_buen_veterinario_p.jpg',
+    HISTORIA: 'https://romerogalloabogadas.com/wp-content/uploads/2024/03/REGIMEN-DE-VISITAS-DE-ANIMALES-1024x576.jpg',
 };
 
 

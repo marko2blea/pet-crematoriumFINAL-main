@@ -131,7 +131,7 @@
               <p class="text-white text-sm mb-4">
                 Brindamos un servicio profesional y respetuoso, acompañando a las familias en los momentos más difíciles con empatía y calidez.
               </p>
-              <NuxtLink to="/nosotros" class="inline-block bg-bd-gold-accent text-purple-dark font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-yellow-400 hover:scale-105 transition transform">
+              <NuxtLink to="/about" class="inline-block bg-bd-gold-accent text-purple-dark font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-yellow-400 hover:scale-105 transition transform">
                 Conocernos
               </NuxtLink>
             </div>
