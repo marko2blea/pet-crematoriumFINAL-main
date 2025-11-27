@@ -112,11 +112,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { User } from '../../app/types';
 
-// 1. Proteger esta página
+// Proteger esta página
 definePageMeta({
   middleware: 'auth'
 });
@@ -130,28 +130,38 @@ const isSaving = ref(false);
 const saveMessage = ref('');
 const saveError = ref(false);
 
-// --- (NUEVO) Estado Formulario 2 (Contraseña) ---
+// --- Estado Formulario 2 (Contraseña) ---
 const passForm = ref({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
 });
 const isSavingPass = ref(false);
 const passMessage = ref('');
 const passError = ref(false);
 
-// 2. Rellenar el formulario de Datos Personales
+// Rellenar el formulario de Datos Personales
 onMounted(() => {
-  if (user.value) { 
-    form.value = structuredClone(user.value);
-  } else {
-    saveError.value = true;
-    saveMessage.value = "Error: No se pudo cargar la información del usuario.";
+  // Si ya hay usuario al montar, lo usamos
+  if (user.value) {
+    form.value = JSON.parse(JSON.stringify(user.value));
   }
+
+  // Escuchamos cambios en user por si llega después
+  watch(
+    user,
+    (nuevoUser) => {
+      if (nuevoUser) {
+        form.value = JSON.parse(JSON.stringify(nuevoUser));
+        saveError.value = false;
+        saveMessage.value = '';
+      }
+    },
+    { immediate: true }
+  );
 });
 
-
-// --- Guardar Cambios (Datos Personales) ---
+// Guardar Cambios (Datos Personales)
 const guardarPerfil = async () => {
   if (!form.value) return;
 
@@ -160,7 +170,7 @@ const guardarPerfil = async () => {
   saveError.value = false;
 
   try {
-    const response = await $fetch('/api/usuario/editar-perfil', {
+    const response: any = await $fetch('/api/usuario/editar-perfil', {
       method: 'PUT',
       body: {
         id_usuario: form.value.id_usuario,
@@ -174,19 +184,24 @@ const guardarPerfil = async () => {
       }
     });
 
-    user.value = response.user;
+    // Actualiza el user global si la API devuelve user
+    if (response.user) {
+      user.value = response.user;
+    }
+
     saveMessage.value = '¡Perfil actualizado con éxito!';
     saveError.value = false;
 
   } catch (err: any) {
+    console.error('Error al guardar perfil:', err);
     saveError.value = true;
-    saveMessage.value = err.data?.statusMessage || 'Error al guardar el perfil.';
+    saveMessage.value = err?.data?.statusMessage || 'Error al guardar el perfil.';
   } finally {
     isSaving.value = false;
   }
 };
 
-// --- (NUEVO) Guardar Cambios (Contraseña) ---
+// Guardar Cambios (Contraseña)
 const guardarPassword = async () => {
   if (!user.value) return;
 
@@ -210,8 +225,7 @@ const guardarPassword = async () => {
   }
 
   try {
-    // Llamar a la nueva API de contraseña
-    const response = await $fetch('/api/usuario/cambiar-contrasena', {
+    const response: any = await $fetch('/api/usuario/cambiar-contrasena', {
       method: 'PUT',
       body: {
         id_usuario: user.value.id_usuario,
@@ -220,14 +234,14 @@ const guardarPassword = async () => {
       }
     });
 
-    passMessage.value = response.message;
+    passMessage.value = response.message || 'Contraseña actualizada correctamente.';
     passError.value = false;
-    // Limpiar formulario de contraseña
     passForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
 
   } catch (err: any) {
+    console.error('Error al actualizar contraseña:', err);
     passError.value = true;
-    passMessage.value = err.data?.statusMessage || 'Error al actualizar la contraseña.';
+    passMessage.value = err?.data?.statusMessage || 'Error al actualizar la contraseña.';
   } finally {
     isSavingPass.value = false;
   }
@@ -252,7 +266,6 @@ const guardarPassword = async () => {
 .border-red-300 { border-color: #f5c6cb; }
 .border-yellow-500 { border-color: #f59e0b; } /* Para el nuevo formulario */
 
-/* (CORREGIDO) Añadidas las definiciones de 'ring' y 'border' */
 .focus\:ring-purple-deep:focus { 
     --tw-ring-color: #5C2A72; 
 }

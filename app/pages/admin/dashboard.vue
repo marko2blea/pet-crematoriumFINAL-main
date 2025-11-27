@@ -204,7 +204,7 @@
           <!-- SOLO PRODUCTOS -->
           <div>
             <h2 class="text-lg font-bold text-dark-primary-blue mb-3">
-              Pedidos Solo Productos
+              Pedidos
             </h2>
             <div class="border rounded-lg overflow-hidden">
               <table
@@ -296,7 +296,7 @@
                 </tbody>
               </table>
               <div v-else class="text-center py-6 text-gray-500 text-sm">
-                No hay pedidos solo productos con este filtro.
+                No hay pedidos de productos con este filtro.
               </div>
             </div>
           </div>

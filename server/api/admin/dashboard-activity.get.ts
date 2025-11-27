@@ -1,50 +1,77 @@
 // server/api/admin/dashboard-activity.get.ts
 import { db } from '../../utils/prisma';
+import { defineEventHandler, createError } from 'h3';
 
-/**
- * API para el widget "Actividad Reciente" del Dashboard.
- * Obtiene los 5 Pedidos más recientes que están pendientes de pago.
- */
 export default defineEventHandler(async (event) => {
   try {
-    const pedidosPendientes = await db.pedido.findMany({
-      where: {
-        estado_pedido: 'Pendiente',
-        es_reserva: true // Solo mostrar reservas en este widget
-      },
-      orderBy: {
-        fecha_pedido: 'desc',
-      },
+    // Traer SIEMPRE los últimos 5 pedidos (de cualquier tipo)
+    const pedidos = await db.pedido.findMany({
+      orderBy: { fecha_pedido: 'desc' },
       take: 5,
       include: {
-        usuario: {
-          select: { nombre: true, apellido_paterno: true },
+        usuario: true,
+        reserva: {
+          include: {
+            detalle_reserva: true,
+          },
         },
+        pago: true,
         detalles_pedido: {
-          select: { producto: { select: { nombre_producto: true } } },
-          take: 1
+          include: {
+            producto: true,
+          },
         },
-        pago: {
-            select: { monto: true }
-        }
       },
     });
 
-    const formatted = pedidosPendientes.map(pedido => ({
-      id_reserva: pedido.id_pedido, // (MODIFICADO) Es el ID del Pedido
-      cliente: `${pedido.usuario?.nombre || 'Cliente'} ${pedido.usuario?.apellido_paterno || ''}`.trim(),
-      servicio: pedido.detalles_pedido[0]?.producto.nombre_producto || 'N/A',
-      monto: Number(pedido.pago?.monto) || 0,
-      fecha: new Date(pedido.fecha_pedido).toLocaleDateString('es-CL')
-    }));
-    
-    return formatted;
+    const actividad = pedidos.map((p) => {
+      // Cliente
+      const cliente =
+        p.usuario?.nombre && p.usuario?.apellido_paterno
+          ? `${p.usuario.nombre} ${p.usuario.apellido_paterno}`
+          : p.usuario?.nombre || 'Cliente desconocido';
 
+      // Determinar "servicio"/descripción principal
+      const servicioDetalle = p.reserva?.detalle_reserva;
+      const servicioProducto = p.detalles_pedido.find(
+        (d) => d.producto && d.producto.tipo_producto === 'Servicio'
+      );
+
+      let servicioNombre = 'Solo productos';
+      if (servicioDetalle?.nombre_servicio) {
+        servicioNombre = servicioDetalle.nombre_servicio;
+      } else if (servicioProducto?.producto?.nombre_producto) {
+        servicioNombre = servicioProducto.producto.nombre_producto;
+      }
+
+      // Monto (pago si existe, sino precio_total del pedido)
+      const monto = Number(p.pago?.monto) || Number(p.precio_total) || 0;
+
+      // Fecha legible
+      const fechaObj = p.fecha_pedido;
+      const fecha = fechaObj
+        ? fechaObj.toLocaleDateString('es-CL', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })
+        : '';
+
+      return {
+        id_reserva: p.reserva?.id_reserva ?? p.id_pedido, // fallback al id_pedido si no hubiera reserva
+        cliente,
+        servicio: servicioNombre,
+        monto,
+        fecha,
+      };
+    });
+
+    return actividad;
   } catch (error: any) {
-    console.error("Error al obtener actividad del dashboard:", error);
+    console.error('Error en dashboard-activity:', error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Error interno del servidor al consultar la actividad.',
+      statusMessage: 'Error al cargar la actividad reciente.',
     });
   }
 });
