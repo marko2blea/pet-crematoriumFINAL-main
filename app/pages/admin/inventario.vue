@@ -56,7 +56,7 @@
         <!-- SECCION PRODUCTOS FÍSICOS (Urnas y Accesorios) -->
         <h2 class="text-2xl font-bold text-purple-deep mb-4 flex items-center space-x-2">
             <font-awesome-icon icon="fas fa-box" class="text-purple-deep"/>
-            <span>Productos Físicos ({{ productos.length }})</span>
+            <span>Productos ({{ productos.length }})</span>
         </h2>
         <div class="bg-white rounded-xl shadow-2xl overflow-hidden mb-12">
           <table class="w-full">

@@ -125,7 +125,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
           <div class="relative rounded-xl overflow-hidden shadow-xl transform transition duration-300 hover:scale-[1.02] hover:shadow-2xl border border-gray-200">
-            <img src="/nosotros.jpg" alt="Nosotros" class="w-full h-64 object-cover"/>
+            <img src="/phh.jpg" alt="Nosotros" class="w-full h-64 object-cover"/>
             <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
               <h3 class="text-2xl font-bold text-white mb-2">Sobre Nosotros</h3>
               <p class="text-white text-sm mb-4">

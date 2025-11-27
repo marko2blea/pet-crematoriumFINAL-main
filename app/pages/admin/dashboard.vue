@@ -1,16 +1,17 @@
 <template>
-  <div class="pt-14 py-16 min-h-screen container mx-auto px-4 space-y-8">
-    <div class="border-b-2 border-gray-300 pb-3">
+  <div class="pt-14 py-16 min-h-screen container mx-auto px-4 space-y-8 dashboard-fade-in">
+    <!-- Título -->
+    <div class="border-b-2 border-gray-300 pb-3 animate-fade-down">
       <h1 class="text-3xl font-bold text-purple-dark">Dashboard</h1>
     </div>
 
     <!-- KPIs -->
-    <div v-if="pendingStats" class="text-center p-10 bg-white rounded-xl shadow-lg">
+    <div v-if="pendingStats" class="text-center p-10 bg-white rounded-xl shadow-lg animate-fade-up">
       <p class="text-lg font-semibold text-gray-500">Cargando estadísticas...</p>
     </div>
     <div
       v-else-if="statsError"
-      class="text-center p-10 bg-red-50 rounded-xl shadow-lg border border-red-300"
+      class="text-center p-10 bg-red-50 rounded-xl shadow-lg border border-red-300 animate-fade-up"
     >
       <p class="text-lg font-semibold text-red-700">
         Error al cargar estadísticas: {{ statsError.message }}
@@ -18,7 +19,7 @@
     </div>
     <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div
-        class="bg-purple-deep text-white p-6 rounded-xl shadow-2xl flex items-center space-x-4"
+        class="bg-purple-deep text-white p-6 rounded-xl shadow-2xl flex items-center space-x-4 animate-kpi"
       >
         <font-awesome-icon
           icon="fas fa-dollar-sign"
@@ -38,7 +39,7 @@
           </p>
         </div>
       </div>
-      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
+      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4 animate-kpi">
         <font-awesome-icon icon="fas fa-clock" class="text-4xl text-yellow-500 opacity-70" />
         <div>
           <p class="text-sm uppercase tracking-wider text-gray-500">
@@ -49,7 +50,7 @@
           </p>
         </div>
       </div>
-      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4">
+      <div class="bg-white p-6 rounded-xl shadow-2xl flex items-center space-x-4 animate-kpi">
         <font-awesome-icon icon="fas fa-boxes" class="text-4xl text-red-500 opacity-70" />
         <div>
           <p class="text-sm uppercase tracking-wider text-gray-500">
@@ -64,7 +65,7 @@
 
     <!-- Actividad reciente -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-2xl">
+      <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-2xl animate-fade-up">
         <h3 class="text-2xl font-bold text-purple-dark mb-4 border-b pb-2">
           <font-awesome-icon icon="fas fa-bell" class="mr-2 text-purple-deep" />
           Actividad Reciente
@@ -75,7 +76,7 @@
         </div>
         <div
           v-else-if="activityError"
-          class="text-center py-10 text-red-600 bg-red-50"
+          class="text-center py-10 text-red-600 bg-red-50 rounded-lg"
         >
           Error: {{ activityError.message }}
         </div>
@@ -95,7 +96,7 @@
             v-for="reserva in activityData"
             :key="reserva.id_reserva"
             :to="`/admin/editar-reserva?id=${reserva.id_reserva}`"
-            class="block p-4 rounded-lg hover:bg-purple-card transition duration-150 border-l-4 border-yellow-500 bg-white-subtle shadow-sm"
+            class="block p-4 rounded-lg hover:bg-purple-card transition duration-150 border-l-4 border-yellow-500 bg-white-subtle shadow-sm animate-list-item"
           >
             <div class="flex justify-between items-center">
               <div>
@@ -121,8 +122,9 @@
         </div>
       </div>
 
+      <!-- Atajos -->
       <div class="space-y-6">
-        <div class="bg-white p-6 rounded-xl shadow-2xl">
+        <div class="bg-white p-6 rounded-xl shadow-2xl animate-fade-up-delayed">
           <h3 class="text-2xl font-bold text-purple-dark mb-4">
             <font-awesome-icon icon="fas fa-rocket" class="mr-2" />
             Atajos Rápidos
@@ -164,7 +166,7 @@
     <!-- Gestión de reservas -->
     <div id="gestion-reservas" class="mt-12">
       <div
-        class="flex flex-wrap justify-between items-center mb-8 border-b-2 border-gray-300 pb-3 gap-4"
+        class="flex flex-wrap justify-between items-center mb-8 border-b-2 border-gray-300 pb-3 gap-4 animate-fade-down"
       >
         <h1 class="text-3xl font-bold text-purple-dark">Gestión de Reservas</h1>
 
@@ -188,7 +190,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-xl shadow-2xl p-4">
+      <div class="bg-white rounded-xl shadow-2xl p-4 animate-fade-up">
         <div v-if="pendingReservations" class="text-center py-10 text-gray-500">
           Cargando reservas...
         </div>
@@ -202,13 +204,13 @@
         <!-- Dos tablas: solo productos / servicios -->
         <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- SOLO PRODUCTOS -->
-          <div>
+          <div class="animate-fade-up">
             <h2 class="text-lg font-bold text-dark-primary-blue mb-3">
               Pedidos Solo Productos
             </h2>
             <div class="border rounded-lg overflow-hidden">
               <table
-                v-if="reservasSoloProductos.length > 0"
+                v-if="reservasSoloProductosPaginadas.length > 0"
                 class="min-w-full divide-y divide-gray-200"
               >
                 <thead class="bg-purple-dark text-white">
@@ -242,7 +244,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr
-                    v-for="reserva in reservasSoloProductos"
+                    v-for="reserva in reservasSoloProductosPaginadas"
                     :key="reserva.id_pedido"
                     class="hover:bg-purple-card transition duration-150"
                   >
@@ -288,17 +290,41 @@
               <div v-else class="text-center py-6 text-gray-500 text-sm">
                 No hay pedidos solo productos con este filtro.
               </div>
+
+              <!-- Paginación Solo Productos -->
+              <div
+                v-if="totalPagesSoloProductos > 1"
+                class="flex justify-center items-center gap-3 py-3 border-t bg-gray-50 text-xs"
+              >
+                <button
+                  class="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="pageSoloProductos === 1"
+                  @click="pageSoloProductos--"
+                >
+                  Anterior
+                </button>
+                <span>
+                  Página {{ pageSoloProductos }} de {{ totalPagesSoloProductos }}
+                </span>
+                <button
+                  class="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="pageSoloProductos === totalPagesSoloProductos"
+                  @click="pageSoloProductos++"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- SERVICIOS (con o sin productos) -->
-          <div>
+          <div class="animate-fade-up-delayed">
             <h2 class="text-lg font-bold text-dark-primary-blue mb-3">
               Reservas de Servicio
             </h2>
             <div class="border rounded-lg overflow-hidden">
               <table
-                v-if="reservasServicios.length > 0"
+                v-if="reservasServiciosPaginadas.length > 0"
                 class="min-w-full divide-y divide-gray-200"
               >
                 <thead class="bg-purple-dark text-white">
@@ -337,7 +363,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr
-                    v-for="reserva in reservasServicios"
+                    v-for="reserva in reservasServiciosPaginadas"
                     :key="reserva.id_pedido"
                     class="hover:bg-purple-card transition duration-150"
                   >
@@ -387,6 +413,30 @@
               </table>
               <div v-else class="text-center py-6 text-gray-500 text-sm">
                 No hay reservas de servicio con este filtro.
+              </div>
+
+              <!-- Paginación Servicios -->
+              <div
+                v-if="totalPagesServicios > 1"
+                class="flex justify-center items-center gap-3 py-3 border-t bg-gray-50 text-xs"
+              >
+                <button
+                  class="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="pageServicios === 1"
+                  @click="pageServicios--"
+                >
+                  Anterior
+                </button>
+                <span>
+                  Página {{ pageServicios }} de {{ totalPagesServicios }}
+                </span>
+                <button
+                  class="px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="pageServicios === totalPagesServicios"
+                  @click="pageServicios++"
+                >
+                  Siguiente
+                </button>
               </div>
             </div>
           </div>
@@ -440,7 +490,7 @@ definePageMeta({
 
 const router = useRouter();
 
-// Lógica de eliminación (igual que antes)
+// Lógica de eliminación (por si vuelves a mostrar botón de borrar)
 const deletingIds = ref<Set<number>>(new Set());
 const isDeleting = (id: number) => deletingIds.value.has(id);
 
@@ -527,10 +577,11 @@ interface Reserva {
   estadoReserva: string;
   monto: number;
   petName?: string;
-  es_reserva: boolean;
+  es_reserva?: boolean; // ⚠️ ahora opcional, para que no se rompa si el backend no lo manda
 }
 
 const apiUrl = '/api/admin/reservas';
+
 const {
   data: responseData,
   pending: pendingReservations,
@@ -550,13 +601,49 @@ const {
 
 const reservations = computed(() => responseData.value?.pedidos || []);
 
-// separar en dos grupos
+// --- SEPARAR EN DOS GRUPOS ---
+// Si el backend envía es_reserva, se usa. Si no, se cae al plan B: estadoReserva !== 'N/A' => es reserva.
+const esReserva = (r: Reserva): boolean => {
+  if (typeof r.es_reserva === 'boolean') return r.es_reserva;
+  // fallback basado en los datos que ya tienes en reservas.get.ts
+  return r.estadoReserva !== 'N/A';
+};
+
 const reservasSoloProductos = computed(() =>
-  reservations.value.filter((r) => !r.es_reserva)
+  reservations.value.filter((r) => !esReserva(r))
 );
 const reservasServicios = computed(() =>
-  reservations.value.filter((r) => r.es_reserva)
+  reservations.value.filter((r) => esReserva(r))
 );
+
+// --- PAGINACIÓN LOCAL (10 por página para cada tabla) ---
+const pageSize = 10;
+
+const pageSoloProductos = ref(1);
+const pageServicios = ref(1);
+
+const totalPagesSoloProductos = computed(() =>
+  Math.max(1, Math.ceil(reservasSoloProductos.value.length / pageSize))
+);
+const totalPagesServicios = computed(() =>
+  Math.max(1, Math.ceil(reservasServicios.value.length / pageSize))
+);
+
+const reservasSoloProductosPaginadas = computed(() => {
+  const start = (pageSoloProductos.value - 1) * pageSize;
+  return reservasSoloProductos.value.slice(start, start + pageSize);
+});
+
+const reservasServiciosPaginadas = computed(() => {
+  const start = (pageServicios.value - 1) * pageSize;
+  return reservasServicios.value.slice(start, start + pageSize);
+});
+
+// Resetear página cuando cambia filtro
+watch(filterStatus, () => {
+  pageSoloProductos.value = 1;
+  pageServicios.value = 1;
+});
 
 // Navegar a editar
 const editReserva = (id: number) => {
@@ -566,8 +653,10 @@ const editReserva = (id: number) => {
 
 <style scoped lang="postcss">
 .shortcut-link {
-  @apply block w-full text-left text-white py-3 px-4 rounded-lg font-bold transition duration-150 shadow-md;
+  @apply block w-full text-left text-white py-3 px-4 rounded-lg font-bold transition duration-150 shadow-md transform hover:scale-105;
 }
+
+/* COLORES */
 .text-purple-dark {
   color: #4a235a;
 }
@@ -666,5 +755,48 @@ const editReserva = (id: number) => {
 }
 .disabled\:opacity-50:disabled {
   opacity: 0.5;
+}
+
+/* ANIMACIONES */
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-fade-in {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+.animate-fade-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+.animate-fade-up-delayed {
+  animation: fade-in-up 0.6s ease-out;
+}
+.animate-fade-down {
+  animation: fade-in-down 0.4s ease-out;
+}
+.animate-kpi {
+  animation: fade-in-up 0.5s ease-out;
+}
+.animate-list-item {
+  animation: fade-in-up 0.4s ease-out;
 }
 </style>
