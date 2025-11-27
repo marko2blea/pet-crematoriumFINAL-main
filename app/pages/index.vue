@@ -11,7 +11,7 @@
           APOYO EN LOS MOMENTOS MÁS DIFÍCILES
         </h1>
         <p class="text-lg md:text-2xl mb-8 animate-slide-in-bottom">
-          DESDE 2017, ENTREGANDO UN SERVICIO PROFESIONAL, RESPETUOSO Y EMPÁTICO PARA QUIENES PIERDEN A UN SER QUERIDO.
+          ENTREGANDO UN SERVICIO PROFESIONAL, RESPETUOSO Y EMPÁTICO PARA QUIENES PIERDEN A UN SER QUERIDO.
         </p>
         <NuxtLink to="/#servicios" 
           class="bg-bd-gold-accent text-purple-dark font-bold py-3 px-8 rounded-lg text-lg hover:bg-yellow-400 transition duration-300 transform hover:scale-105 shadow-xl animate-fade-in">

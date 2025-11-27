@@ -4,7 +4,7 @@
     <section class="relative h-80 flex items-center justify-center text-white px-4">
       <div class="absolute inset-0 bg-black opacity-40 z-10"></div>
       <div class="absolute inset-0 z-0">
-        <img src="/fondo nosotros.jpg" alt="Fondo Sobre Nosotros" class="w-full h-full object-cover">
+        <img src="/phhh.jpg" alt="Fondo Sobre Nosotros" class="w-full h-full object-cover">
       </div>
       <div class="relative z-20 max-w-3xl text-center">
         <img src="/logo.png" alt="Logo Crematorio" class="w-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg">
