@@ -1,119 +1,151 @@
+// server/api/admin/reserva-detalle-editable.get.ts
 import { db } from '../../utils/prisma';
-import { createError } from 'h3';
+import { defineEventHandler, getQuery, createError } from 'h3';
 
 export default defineEventHandler(async (event) => {
-    const query = getQuery(event);
-    const idParam = query.id as string;
+  const query = getQuery(event);
+  const idParam = query.id as string;
 
-    if (!idParam) {
-        throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva (query parameter "id").' });
-    }
+  if (!idParam) {
+    throw createError({ statusCode: 400, statusMessage: 'Falta el ID de la reserva.' });
+  }
 
-    const idReserva = parseInt(idParam);
-    if (isNaN(idReserva) || idReserva < 1) {
-        throw createError({ statusCode: 400, statusMessage: 'ID de reserva inválido.' });
-    }
+  const idReserva = parseInt(idParam);
+  if (isNaN(idReserva) || idReserva < 1) {
+    throw createError({ statusCode: 400, statusMessage: 'ID de reserva inválido.' });
+  }
 
-    try {
-        // Carga la Reserva, el Pedido, el Usuario y los Detalles del Pedido
-        const reservaDetalle = await db.reserva.findUnique({
-            where: { id_reserva: idReserva },
-            include: {
-                pedido: {
-                    include: {
-                        usuario: true,
-                        detalles_pedido: {
-                            // Incluimos el producto para obtener su nombre y tipo
-                            include: { producto: true }
-                        },
-                    }
-                },
-                // Incluimos el detalle principal de la reserva (el servicio)
-                detalle_reserva: true,
-            }
-        });
+  try {
+    const reservaDetalle = await db.reserva.findUnique({
+      where: { id_reserva: idReserva },
+      include: {
+        pedido: {
+          include: {
+            usuario: true,
+            envio: true,
+            detalles_pedido: { include: { producto: true } },
+          },
+        },
+        detalle_reserva: true,
+        mascota: true,
+      },
+    });
 
-        if (!reservaDetalle || !reservaDetalle.pedido) {
-            throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada o pedido asociado faltante.' });
-        }
-       
-        // --- 1. Obtener Datos de la Mascota ---
-        let mascotaData = null;
-        if (reservaDetalle.pedido.usuario.id_usuario) {
-            // Buscamos la mascota más reciente asociada al usuario
-            const mascotas = await db.mascota.findMany({
-                where: { id_usuario: reservaDetalle.pedido.usuario.id_usuario },
-                orderBy: { id_mascota: 'desc' },
-                take: 1
-            });
-            if (mascotas.length > 0) {
-                mascotaData = {
-                    nombre: mascotas[0].nombre_mascota || 'N/A',
-                    peso: mascotas[0].peso?.toNumber() ?? null, 
-                    edad: mascotas[0].edad ?? null, 
-                };
-            }
-        }
+    if (!reservaDetalle) {
+      throw createError({ statusCode: 404, statusMessage: 'Reserva no encontrada.' });
+    }
 
-        // --- 2. UNIFICACIÓN DE ÍTEMS COMPRADOS (SERVICIOS + PRODUCTOS) ---
-        const todosLosItems: any[] = [];
+    if (!reservaDetalle.pedido) {
+      console.error(
+        `ERROR: Reserva #${idReserva} encontrada, pero el id_pedido está roto o es nulo.`
+      );
+      throw createError({
+        statusCode: 404,
+        statusMessage: `Reserva #${idReserva} encontrada, pero el pedido asociado es nulo.`,
+      });
+    }
 
-        // 2a. Incluir el Servicio Principal (desde detalle_reserva, es el item base)
-        if (reservaDetalle.detalle_reserva) {
-            todosLosItems.push({
-                nombre: reservaDetalle.detalle_reserva.nombre_servicio || 'Servicio Principal',
-                cantidad: reservaDetalle.detalle_reserva.cantidad || 1,
-                precio: reservaDetalle.detalle_reserva.precio_total?.toNumber() ?? 0,
-                tipo: reservaDetalle.detalle_reserva.tipo_servicio,
-            });
-        }
+    // MASCOTA
+    let mascotaData = null;
+    if (reservaDetalle.mascota) {
+      mascotaData = {
+        nombre: reservaDetalle.mascota.nombre_mascota || 'N/A',
+        peso: reservaDetalle.mascota.peso
+          ? reservaDetalle.mascota.peso.toNumber()
+          : null,
+        edad: reservaDetalle.mascota.edad ?? null,
+      };
+    }
 
-        // 2b. Incluir Productos/Accesorios (desde detalles_pedido, son los ítems adicionales)
-        reservaDetalle.pedido.detalles_pedido.forEach(detalle => {
-            // Verificamos que el producto asociado no sea nulo antes de acceder a sus propiedades
-            if (detalle.producto) { 
-                todosLosItems.push({
-                    nombre: detalle.producto.nombre_producto || 'Ítem Desconocido',
-                    cantidad: detalle.cantidad,
-                    // Calcular el precio total del detalle (unitario * cantidad)
-                    precio: (detalle.precio_unitario?.toNumber() ?? 0) * detalle.cantidad, 
-                    tipo: detalle.producto.tipo_producto || 'Accesorio/Urna',
-                });
-            }
-        });
+    // SERVICIO PRINCIPAL (detalle_reserva)
+    const detalleServicio = reservaDetalle.detalle_reserva;
+    const nombreServicio = detalleServicio?.nombre_servicio || 'N/A';
+    const tipoServicio = detalleServicio?.tipo_servicio || null;
 
-        // --- 3. Formatear la Respuesta ---
-        const fechaReservada = reservaDetalle.fecha_reservada;
-        const fechaReservadaISO = fechaReservada?.toISOString().split('T')[0] || '';
-        const horaReservadaISO = fechaReservada ? new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaReservada) : '';
-       
-        const precioTotalNumerico = reservaDetalle.pedido.precio_total?.toNumber() ?? 0;
+    // PRODUCTOS ADICIONALES (solo productos, no el servicio)
+    const productosComprados: {
+      nombre: string;
+      cantidad: number;
+      precio: number;
+      tipo: string;
+    }[] = [];
 
-        return {
-            id_reserva: reservaDetalle.id_reserva,
-            cod_trazabilidad: reservaDetalle.cod_trazabilidad,
-            estado_reserva: reservaDetalle.estado_reserva,
-            fecha_reservada: fechaReservadaISO,
-            hora_reservada: horaReservadaISO,
-            precio_total: precioTotalNumerico,
-           
-            nombre_cliente: reservaDetalle.pedido.usuario.nombre || 'Desconocido',
-            correo_cliente: reservaDetalle.pedido.usuario.correo || 'N/A',
-           
-            region: reservaDetalle.region,
-            comuna: reservaDetalle.comuna,
-            direccion: reservaDetalle.direccion,
+    reservaDetalle.pedido.detalles_pedido.forEach((detalle) => {
+      if (detalle.producto) {
+        productosComprados.push({
+          nombre: detalle.producto.nombre_producto || 'Ítem Desconocido',
+          cantidad: detalle.cantidad,
+          precio: detalle.precio_unitario
+            ? detalle.precio_unitario.toNumber() * detalle.cantidad
+            : 0,
+          tipo: detalle.producto.tipo_producto || 'Producto',
+        });
+      }
+    });
 
-            mascota_datos: mascotaData,
-            // Devolvemos la lista unificada de servicios, urnas y accesorios
-            productos_comprados: todosLosItems,
-        };
+    // FECHAS
+    const fechaReservadaISO =
+      reservaDetalle.fecha_reservada?.toISOString().split('T')[0] || '';
 
-    } catch (error: any) {
-        console.error('Error al obtener detalle de reserva (CRITICO):', error);
-        throw createError({
-            statusCode: 500,
-            statusMessage: 'Error interno al cargar la reserva. Revise logs del servidor.'
-        });
-    }
+    let horaReservadaISO = '';
+    if (reservaDetalle.hora_reservada) {
+      const hours = reservaDetalle.hora_reservada
+        .getUTCHours()
+        .toString()
+        .padStart(2, '0');
+      const minutes = reservaDetalle.hora_reservada
+        .getUTCMinutes()
+        .toString()
+        .padStart(2, '0');
+      horaReservadaISO = `${hours}:${minutes}`;
+    }
+
+    const envio = reservaDetalle.pedido.envio;
+    const esEnvio = !!envio;
+
+    const precioTotalNumerico = reservaDetalle.pedido.precio_total
+      ? reservaDetalle.pedido.precio_total.toNumber()
+      : 0;
+
+    const usuario = reservaDetalle.pedido.usuario;
+
+    return {
+      id_reserva: reservaDetalle.id_reserva,
+      cod_trazabilidad: reservaDetalle.cod_trazabilidad,
+      estado_reserva: reservaDetalle.estado_reserva,
+      fecha_reservada: fechaReservadaISO,
+      hora_reservada: horaReservadaISO,
+      precio_total: precioTotalNumerico,
+
+      nombre_cliente: usuario?.nombre || 'Desconocido',
+      correo_cliente: usuario?.correo || 'N/A',
+
+      region: esEnvio ? envio!.region_envio : reservaDetalle.region || '',
+      comuna: esEnvio ? envio!.comuna_envio : reservaDetalle.comuna || '',
+      direccion: esEnvio ? envio!.direccion_envio : reservaDetalle.direccion || '',
+
+      mascota_datos: mascotaData,
+
+      // 🔥 para el bloque "Servicio Reservado"
+      nombre_servicio: nombreServicio,
+      tipo_servicio: tipoServicio,
+
+      // 🔥 para el bloque "Productos Adicionales Comprados"
+      productos_comprados: productosComprados,
+    };
+  } catch (error: any) {
+    console.error('Error al obtener detalle de reserva (CRITICO):', error);
+
+    if (error.statusCode) {
+      // ya es un createError (404, 400, etc.)
+      throw error;
+    }
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Error interno al cargar la reserva: ${
+        error.message || 'Error desconocido'
+      }.`,
+    });
+  }
 });
