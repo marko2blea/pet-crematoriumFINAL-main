@@ -1,7 +1,7 @@
 // server/api/admin/reservas.get.ts
 import { db } from '../../utils/prisma';
 import { defineEventHandler, getQuery, createError } from 'h3';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client'; 
 
 const ITEMS_PER_PAGE = 15;
 
@@ -12,9 +12,7 @@ export default defineEventHandler(async (event) => {
     const page = parseInt((query.page as string) || '1');
     const skip = (page - 1) * ITEMS_PER_PAGE;
 
-    const where: Prisma.PedidoWhereInput = {
-      es_reserva: true, // 🔥 solo pedidos que son reserva de servicio
-    };
+    const where: Prisma.PedidoWhereInput = {};
 
     if (status && status !== 'Todos') {
       where.estado_pedido = status;
@@ -25,9 +23,7 @@ export default defineEventHandler(async (event) => {
         where,
         skip,
         take: ITEMS_PER_PAGE,
-        orderBy: {
-          fecha_pedido: 'desc',
-        },
+        orderBy: { fecha_pedido: 'desc' },
         include: {
           usuario: {
             include: {
@@ -66,7 +62,6 @@ export default defineEventHandler(async (event) => {
 
       return {
         id_pedido: p.id_pedido,
-        id_reserva: p.reserva?.id_reserva ?? null, // 🔥 se usa para editar
         id_usuario: p.id_usuario,
         fecha: p.fecha_pedido,
         cliente: p.usuario
@@ -83,6 +78,7 @@ export default defineEventHandler(async (event) => {
           'N/A',
         monto: Number(p.pago?.monto) || Number(p.precio_total) || 0,
         estadoPedido: p.estado_pedido,
+        es_reserva: !!p.es_reserva, // 🔥 CLAVE PARA SEPARAR EN EL FRONT
       };
     });
 
