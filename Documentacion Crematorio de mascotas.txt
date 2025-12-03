@@ -1,0 +1,348 @@
+# pet-crematoriumFINAL – Nuxt 4 + Prisma + PostgreSQL
+
+Aplicación web para gestión de productos/servicios, reservas y cuentas de usuarios de un crematorio de mascotas. Construida con Nuxt 4, Vue 3, Nitro (API), Tailwind CSS y Prisma (PostgreSQL).
+
+## Tecnologías
+
+- Nuxt 4, Nitro, Vue 3, Vite
+- Tailwind CSS
+- Prisma 6 + PostgreSQL
+- Font Awesome, Chart.js
+- Resend (envío de correos para reseteo de contraseña)
+
+## Estructura del proyecto
+
+```
+app/               # Frontend: páginas, layouts y composables
+  layouts/default.vue
+  pages/*.vue
+  composables/useAuth.ts, useCart.ts
+server/            # Backend Nitro: rutas API
+  api/**/*.ts      # Endpoints (auth, usuario, productos, instalaciones, etc.)
+  utils/prisma.ts  # Cliente Prisma singleton
+prisma/            # Esquema, migraciones y seed
+  schema.prisma
+  migrations/*
+  seed.ts
+assets/css/main.css
+plugins/fontawesome.ts
+nuxt.config.ts
+tailwind.config.js
+```
+
+## Requisitos
+
+- Node.js 18 o superior
+- PostgreSQL en ejecución (local o remoto)
+
+## Variables de entorno
+
+Crea un archivo `.env` en la raíz con:
+
+```
+DATABASE_URL="postgresql://usuario:password@host:5432/base?schema=public"
+RESEND_API_KEY="re_XXXXXX"  # Usa tu clave real si enviarás correos
+```
+
+Notas:
+- Si no usarás Resend en desarrollo, puedes dejar un placeholder para que el servidor no falle.
+- Asegúrate de que PostgreSQL esté accesible desde la URL indicada.
+
+## Instalación
+
+```bash
+npm install
+```
+
+### Generar Prisma Client
+
+```bash
+# Cross‑platform
+npm exec prisma generate
+
+# Windows PowerShell (si tu política bloquea scripts de npx/npm)
+& "C:\\Program Files\\nodejs\\npm.cmd" exec prisma generate
+```
+
+### Migraciones y Seed
+
+```bash
+# Aplicar migraciones en desarrollo
+npm exec prisma migrate dev
+
+# (Opcional) Desplegar migraciones en producción
+npm exec prisma migrate deploy
+
+# Poblar datos de ejemplo (usa prisma/seed.ts)
+npm exec prisma db seed
+
+# Windows PowerShell
+& "C:\\Program Files\\nodejs\\npm.cmd" exec prisma migrate dev
+& "C:\\Program Files\\nodejs\\npm.cmd" exec prisma db seed
+```
+
+## Ejecutar en desarrollo (front + back)
+
+```bash
+npm run dev
+```
+
+- Frontend: `http://localhost:3000/` (si el puerto está ocupado, Nuxt elegirá otro, p. ej. 3001).
+- Backend Nitro: rutas bajo `/api/*` servidas desde el mismo proceso.
+
+## Endpoints principales (API)
+
+- Productos
+  - `GET /api/productos` – Lista de productos
+  - `GET /api/producto?id=...` – Detalle de producto
+- Instalaciones
+  - `GET /api/instalaciones` – Lista de secciones públicas
+  - `POST /api/admin/instalacion` – Crear sección (admin)
+  - `PUT /api/admin/instalacion` – Editar sección (admin)
+  - `DELETE /api/admin/instalacion` – Eliminar sección (admin)
+- Usuario
+  - `PUT /api/usuario/editar-perfil` – Actualizar perfil propio
+  - (Admin) `PUT /api/admin/editar-usuario` – Actualizar usuario y rol
+  - (Admin) `GET /api/admin/usuarios` – Listar usuarios
+- Auth
+  - `POST /api/auth/registro` – Registro
+  - `POST /api/auth/login` – Login
+  - `POST /api/auth/solicitar-reseteo` – Enviar enlace de reseteo (Resend)
+- Otros
+  - `GET /api/about-content` – Contenido “Nosotros”
+  - `GET /api/memoriales` – Memoriales
+  - `POST /api/checkout` – Confirmar reserva y pago
+  - `GET /api/tracking?cod=...` – Seguimiento de servicio
+  - `GET /api/roles` – Roles disponibles
+
+## Autenticación y sesión
+
+- `app/composables/useAuth.ts` usa `useCookie('auth-user')` para persistir sesión (7 días).
+- `app/middleware/auth.ts` protege rutas con `definePageMeta({ middleware: 'auth' })`.
+- Tras login: se guarda el usuario en el cookie y se redirige según el rol.
+
+## UI y Responsividad
+
+- Meta viewport añadida en `nuxt.config.ts`.
+- Ajustes globales de padding horizontal en `app/layouts/default.vue` (`px-4 sm:px-6 lg:px-8`).
+- Formularios clave (`login`, `registro`, `olvide-contrasena`) usan `p-6 sm:p-8` y contenedores responsivos.
+- Header: saludo muestra solo el primer nombre, truncado con elipsis; oculto en pantallas pequeñas (`hidden md:inline`).
+- `tailwind.config.js` incluye globs para `app/**/*` para que Tailwind detecte todas las clases.
+
+## Prisma – Modelos (resumen)
+
+- `usuario`, `rol`, `usuario_permisos`
+- `producto`, `proveedor`, `detalle_reserva`, `reserva`, `pago`, `metodo_pago`
+- `mascota`, `especie`
+- `instalacion`, `about_block`, `memorial`
+
+## Problemas comunes y soluciones
+
+- PowerShell bloquea `npx`/`npm.ps1`: usa `npm.cmd`, por ejemplo:
+  ```powershell
+  & "C:\\Program Files\\nodejs\\npm.cmd" exec prisma generate
+  ```
+- Error: `@prisma/client did not initialize yet` → Ejecuta `prisma generate`.
+- Error: `Missing required environment variable: DATABASE_URL` → Crea `.env` con `DATABASE_URL` válido.
+- Error: `Missing API key. new Resend("re_123")` → Define `RESEND_API_KEY` o usa placeholder en desarrollo.
+- Puerto 3000 ocupado → Nuxt elegirá otro (mira los logs). Vite WS 24678 en uso → cierra instancias previas de dev.
+
+## Scripts útiles
+
+```bash
+npm run dev        # front + back en desarrollo
+npm run build      # compilación de producción
+npm run preview    # preview de build
+npm exec prisma generate
+npm exec prisma migrate dev
+npm exec prisma db seed
+```
+
+## Despliegue
+
+- Construye con `npm run build` y sirve con un adaptador de Nitro (por ejemplo, Node/PM2).
+- Asegura variables de entorno (`DATABASE_URL`, `RESEND_API_KEY`) en producción.
+
+---
+
+Si necesitas más detalle (diagramas de flujo, contratos API, o guías para admin), dilo y los agrego al README.
+
+## Arquitectura
+
+```
+Navegador (Vue/Nuxt)
+   │
+   ├── UI (pages/layouts/components)
+   │
+   └── Llama a rutas API (Nitro)
+            │
+            ├── server/api/** (endpoints)
+            │        └── Prisma Client (server/utils/prisma.ts)
+            │                 └── PostgreSQL
+            │
+            └── Integraciones externas
+                     └── Resend (emails de reseteo)
+```
+
+## Flujo de Autenticación
+
+- Registro: `POST /api/auth/registro` crea usuario Cliente (rol 1).
+- Login: `POST /api/auth/login` devuelve `user` y se guarda en cookie `auth-user` usando `useAuth.ts`.
+- Middleware: páginas con `definePageMeta({ middleware: 'auth' })` requieren sesión.
+- Roles: Cliente (id_rol = 1) no puede acceder a rutas `/admin`.
+- Logout: se limpia `useUser` y la cookie; redirige al inicio.
+- Reseteo:
+  - Solicitar: `POST /api/auth/solicitar-reseteo` con `email` → envía correo vía Resend.
+  - Completar: implementar endpoint de confirmación (pendiente según proyecto).
+
+## Contratos de API (Principales)
+
+### Productos
+- `GET /api/productos`
+  - Respuesta (ejemplo):
+  ```json
+  [
+    {
+      "cod_producto": 1,
+      "nombre_producto": "Servicio Tradicional",
+      "precio_unitario": 150000,
+      "stock_actual": 9999,
+      "disponible": true,
+      "tipo_producto": "Servicio",
+      "id_proveedor": null
+    }
+  ]
+  ```
+
+- `GET /api/producto?id=1`
+  - Respuesta: objeto del producto.
+
+### Instalaciones
+- `GET /api/instalaciones`
+  - Respuesta (ejemplo):
+  ```json
+  [
+    {
+      "id_instalacion": 1,
+      "title": "Sala de despedida",
+      "body": "Espacio íntimo para la familia",
+      "features": ["Privacidad", "Comodidad"],
+      "orden": 1,
+      "creado_en": "2025-11-10T05:22:27.000Z"
+    }
+  ]
+  ```
+
+- Admin Instalación:
+  - `POST /api/admin/instalacion`
+    - Body:
+    ```json
+    { "title": "Nueva sección", "body": "Descripción", "features": ["Característica 1"] }
+    ```
+  - `PUT /api/admin/instalacion`
+    - Body: objeto completo con `id_instalacion` y campos a actualizar.
+  - `DELETE /api/admin/instalacion`
+    - Body:
+    ```json
+    { "id_instalacion": 1 }
+    ```
+
+### Usuario
+- `PUT /api/usuario/editar-perfil`
+  - Body:
+  ```json
+  {
+    "id_usuario": 10,
+    "nombre": "Juan",
+    "apellido_paterno": "Pérez",
+    "apellido_materno": "González",
+    "telefono": 912345678,
+    "region": "Biobío",
+    "comuna": "Concepción",
+    "direccion": "Calle 123"
+  }
+  ```
+  - Respuesta: `{ message, user }` con datos seguros (sin contraseña).
+
+- Admin Usuario:
+  - `PUT /api/admin/editar-usuario` (incluye `id_rol`).
+  - `GET /api/admin/usuarios` lista usuarios.
+
+### Auth
+- `POST /api/auth/registro`
+  - Body mínimo: `{ nombre, apellido_paterno, telefono, correo, contraseña }`.
+- `POST /api/auth/login`
+  - Body: `{ correo, contraseña }`.
+  - Respuesta: `{ user, message }`.
+- `POST /api/auth/solicitar-reseteo`
+  - Body: `{ email }`.
+  - Respuesta: `{ message }` (envío vía Resend).
+
+### Otros
+- `GET /api/about-content` – bloques informativos.
+- `GET /api/memoriales` – listado público.
+- `POST /api/checkout` – proceso de reserva/pago.
+- `GET /api/tracking?cod=ABC123` – seguimiento.
+- `GET /api/roles` – roles disponibles.
+
+## Roles y permisos
+
+- `rol` (tabla): `id_rol`, `nombre_rol`.
+- Convención:
+  - 1: Cliente
+  - 2: Admin
+- Middleware restringe `/admin` a admins.
+
+## Guía para Administrador
+
+- Gestión de Instalaciones: página `instalaciones.vue` con edición inline y acciones `Guardar/Eliminar/Añadir` (conexión a API admin).
+- Gestión de Usuarios: páginas en `app/pages/admin` para listar, editar rol y datos.
+- Inventario: ver productos con `index.vue` y endpoints públicos; agregar endpoints admin si necesitas CRUD completo.
+
+## Manejo de errores
+
+- Los endpoints usan `createError` con `statusCode` y `statusMessage`.
+- Códigos comunes: 400 (validación), 401 (no autorizado), 404 (no encontrado), 500 (interno).
+- Prisma: códigos como `P2025` (registro no encontrado) se manejan explícitamente.
+
+## Seed de datos
+
+- `prisma/seed.ts` crea roles (Cliente/Admin), usuario admin, proveedores, productos y una reserva de ejemplo.
+- Ejecuta:
+```bash
+npm exec prisma db seed
+```
+
+## Despliegue (Node/PM2, ejemplo)
+
+```bash
+npm run build
+# Ajusta variables de entorno en el servidor
+DATABASE_URL=...
+RESEND_API_KEY=...
+# Arranca con el adaptador por defecto (Node)
+npm run preview
+```
+
+Para servidores productivos, usa un proceso en segundo plano (PM2/systemd) y configura logs/monitoreo.
+
+## Seguridad y buenas prácticas
+
+- Validar entradas en el servidor (ej. longitudes, formatos de email/telefono).
+- Sanitizar contenido editable (instalaciones) si se persiste HTML.
+- No exponer campos sensibles (contraseñas) en respuestas.
+- Usar HTTPS en producción y cookies seguras.
+- Revisar dominios verificados en Resend para el `from` del correo.
+
+## UI y accesibilidad
+
+- Componentes responsivos con Tailwind; meta viewport habilitada.
+- En header se muestra saludo con primer nombre truncado, oculto en móvil.
+- Formularios con estados de carga/éxito/error visibles.
+
+## Desarrollo local – Comprobaciones útiles
+
+- `http://localhost:3000/api/instalaciones` → JSON de secciones.
+- `http://localhost:3000/api/productos` → JSON de productos.
+- Prueba login/registro en `login.vue` y `registro.vue`.
+- Editar perfil en `editar-cuenta.vue` (usa `PUT /api/usuario/editar-perfil`).
